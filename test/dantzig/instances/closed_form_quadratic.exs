@@ -22,4 +22,15 @@ defmodule Dantzig.Instances.ClosedFormQuadraticTest do
     # The objective value is correct (within a margin of error)
     assert_in_delta(solution.objective, 0.5, 0.0001)
   end
+
+  test "closed form quadratic: x - x*x (implicit problem)" do
+    problem = Problem.new(direction: :maximize)
+
+    Problem.with_implicit_problem problem do
+      v!(x, min: -2.0, max: 2.0)
+      _obj = Problem.increment_objective(x - x*x)
+    end
+
+    solution = Dantzig.solve(problem)
+  end
 end
