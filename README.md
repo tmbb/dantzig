@@ -1,6 +1,7 @@
 # Dantzig
 
-**TODO: Add description**
+Opimitizion library for elixir, using the HiGHS solver.
+Supports linear programming (LP), mixed linear integer programming (MILP) and quadratic programming (QP). 
 
 ## Installation
 
@@ -19,3 +20,12 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/dantzig>.
 
+## Example
+
+Example taken from the tests
+
+
+
+## Documentation
+
+TODO
