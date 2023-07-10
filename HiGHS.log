@@ -1,0 +1,11 @@
+Running HiGHS 1.4.0 [date: 1970-01-01, git hash: bcf6c0b22]
+Copyright (c) 2022 ERGO-Code under MIT licence terms
+LP   1MHHCAH_model has 1 rows; 3 cols; 3 nonzeros
+Presolving model
+1 rows, 2 cols, 2 nonzeros
+0 rows, 0 cols, 0 nonzeros
+Presolve : Reductions: rows 0(-1); columns 0(-3); elements 0(-3) - Reduced to empty
+Solving the original LP from the solution after postsolve
+Model   status      : Optimal
+Objective value     :  3.0000000000e+02
+HiGHS run time      :          0.00
