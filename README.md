@@ -37,7 +37,7 @@ Example taken from the tests
     # Define a custom utility function to specify declaratively
     # that one element fits inside another.
     fits_inside = fn problem, inside, outside ->
-      Problem.new_constraint(problem, inside <= outside)
+      Problem.add_constraint(problem, Constraint.new(inside <= outside))
     end
 
     # Suppose we need to have the sizes of our boxes calculated
@@ -71,19 +71,18 @@ Example taken from the tests
       v!(canvas2_width, min: 0.0)
       v!(canvas3_width, min: 0.0)
 
-      _c0 <~ Problem.new_constraint(canvas1_width + canvas2_width + canvas3_width == center)
-      _c1 <~ Problem.new_constraint(canvas1_width == 2*canvas2_width)
-      _c2 <~ Problem.new_constraint(canvas1_width == 2*canvas3_width)
+      # constraint!() is special syntax to add a constraint to the problem
+      constraint!(canvas1_width + canvas2_width + canvas3_width == center)
+      constraint!(canvas1_width == 2*canvas2_width)
+      constraint!(canvas1_width == 2*canvas3_width)
 
-      # Inside implicit problems, the <~ operator is rewriten so that
-      # `z <~ f(a, b, c)` becomes `{problem, z} = f(problem, a, b, c)`
-      # (where `problem` is the variable given to the macro)
-      # The first two boxes must fit in the left margin
-      _c3 <~ fits_inside.(box1_width, left_margin)
-      _c4 <~ fits_inside.(box2_width, left_margin)
-
-      # The last box must fit in the right margin
-      _c5 <~ fits_inside.(box3_width, right_margin)
+      # Now it's better to use the `problem` variable
+      problem =
+        problem
+        |> fits_inside.(box1_width, left_margin)
+        |> fits_inside.(box2_width, left_margin)
+        # The last box must fit in the right margin
+        |> fits_inside.(box3_width, right_margin)
 
       # Get the box widths from our "slow call to an external program"
       # We get the widths all at once and only once the all the variables
@@ -94,18 +93,18 @@ Example taken from the tests
         box3_width
       ])
 
-      _c6 <~ Problem.new_constraint(box1_width == box1_w)
-      _c7 <~ Problem.new_constraint(box2_width == box2_w)
-      _c8 <~ Problem.new_constraint(box3_width == box3_w)
+      constraint!(box1_width == box1_w)
+      constraint!(box2_width == box2_w)
+      constraint!(box3_width == box3_w)
 
       # All the margins must add to the given total length
       # NOTE: total_width is not a variable! It's a constant we've defined before
-      # The custom operators from the Dantzig.Polynomial.Operators module handle
+      # The custom operators from the `Dantzig.Polynomial.Operators` module handle
       # both numbers and polynomials
-      _c9 <~ Problem.new_constraint(left_margin + center + right_margin == total_width)
+      constraint!(left_margin + center + right_margin == total_width)
 
       # Minimize the margins and maximize the center
-      _obj <~ Problem.increment_objective(center - left_margin - right_margin)
+      increment_objective!(center - left_margin - right_margin)
     end
 
     solution = Dantzig.solve(problem)

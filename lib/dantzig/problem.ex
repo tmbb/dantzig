@@ -1,19 +1,7 @@
 defmodule Dantzig.Problem do
   alias Dantzig.Polynomial
-
-  defmodule Variable do
-    defstruct name: nil,
-              min: nil,
-              max: nil,
-              type: :real
-  end
-
-  defmodule Constraint do
-    defstruct name: nil,
-              operator: nil,
-              left_hand_side: nil,
-              right_hand_side: nil
-  end
+  alias Dantzig.ProblemVariable
+  alias Dantzig.Constraint
 
   defstruct variable_counter: 0,
             constraint_counter: 0,
@@ -38,18 +26,47 @@ defmodule Dantzig.Problem do
     %__MODULE__{direction: direction}
   end
 
+  def add_constraint(problem, constraint) do
+    constraint_id =
+      if constraint.name do
+        "c#{problem.constraint_counter}_#{constraint.name}"
+      else
+        "c#{problem.constraint_counter}"
+      end
+
+    # Add the unique ID as a new name for the constraint;
+    # Because of how we serialize linear problems, the constraint name should be unique.
+    new_constraint = %{constraint | name: constraint_id}
+
+    new_constraints = Map.put(problem.constraints, constraint_id, new_constraint)
+
+    %{problem | constraints: new_constraints, constraint_counter: problem.constraint_counter + 1}
+  end
+
   defp left_pad_with_zeros(number) when is_integer(number) do
     String.pad_leading(to_string(number), 5, "0")
   end
 
   def increment_objective(problem, polynomial) do
-    new_problem = %{problem | objective: Polynomial.add(problem.objective, polynomial)}
-    {new_problem, new_problem.objective}
+    %{problem | objective: Polynomial.add(problem.objective, polynomial)}
   end
 
   def decrement_objective(problem, polynomial) do
-    new_problem = %{problem | objective: Polynomial.subtract(problem.objective, polynomial)}
-    {new_problem, new_problem.objective}
+    %{problem | objective: Polynomial.subtract(problem.objective, polynomial)}
+  end
+
+  def maximize(problem, polynomial) do
+    case problem.direction do
+      :minimize -> decrement_objective(problem, polynomial)
+      :maximize -> increment_objective(problem, polynomial)
+    end
+  end
+
+  def minimize(problem, polynomial) do
+    case problem.direction do
+      :minimize -> increment_objective(problem, polynomial)
+      :maximize -> decrement_objective(problem, polynomial)
+    end
   end
 
   def new_variable(%__MODULE__{} = problem, suffix, opts \\ []) when is_binary(suffix) do
@@ -58,7 +75,7 @@ defmodule Dantzig.Problem do
     max = Keyword.get(opts, :max, nil)
     type = Keyword.get(opts, :type, :real)
 
-    variable = %Variable{name: name, min: min, max: max, type: type}
+    variable = %ProblemVariable{name: name, min: min, max: max, type: type}
     monomial = Polynomial.variable(name)
     new_variables = Map.put(problem.variables, name, variable)
 
@@ -81,119 +98,8 @@ defmodule Dantzig.Problem do
     {new_problem, Enum.reverse(monomials)}
   end
 
-  @operators [
-    :=,
-    :==,
-    :<,
-    :>,
-    :>=,
-    :<=
-  ]
-
-  defmacro new_linear_constraint(problem, comparison, opts \\ []) do
-    {left, operator, right} = parse_comparison!(comparison)
-
-    quote do
-      unquote(__MODULE__).new_linear_constraint(
-        unquote(problem),
-        unquote(left),
-        unquote(operator),
-        unquote(right),
-        unquote(opts)
-      )
-    end
-  end
-
-  defmacro new_constraint(problem, comparison, opts \\ []) do
-    {left, operator, right} = parse_comparison!(comparison)
-
-    quote do
-      unquote(__MODULE__).new_constraint(
-        unquote(problem),
-        unquote(left),
-        unquote(operator),
-        unquote(right),
-        unquote(opts)
-      )
-    end
-  end
-
-  defp parse_comparison!(expression) do
-    case expression do
-      {operator, _meta, [left, right]} when operator in @operators ->
-        {left, operator, right}
-
-      other ->
-        raise CompileError, """
-        Invalid expression in constraint: #{Macro.to_string(other)}.
-        """
-    end
-  end
-
-  def new_linear_constraint(%__MODULE__{} = problem, left, operator, right, opts \\ [])
-      when operator in @operators do
-    name = Keyword.get(opts, :name)
-    # Convert raw numbers into polynomials
-    left = Polynomial.to_polynomial(left)
-    right = Polynomial.to_polynomial(right)
-
-    difference = Polynomial.subtract(left, right)
-    validate_linear_constraint!(problem, left, right, difference)
-    new_constraint_from_difference(problem, difference, operator, name)
-  end
-
-  def new_constraint(%__MODULE__{} = problem, left, operator, right, opts \\ [])
-      when operator in @operators do
-    name = Keyword.get(opts, :name)
-    # Convert raw numbers into polynomials
-    left = Polynomial.to_polynomial(left)
-    right = Polynomial.to_polynomial(right)
-
-    validate_constraint_variables!(problem, left, right)
-    difference = Polynomial.subtract(left, right)
-    new_constraint_from_difference(problem, difference, operator, name)
-  end
-
-  defp new_constraint_from_difference(%__MODULE__{} = problem, difference, operator, name)
-       when operator in @operators do
-    {%Polynomial{} = left_hand_side, minus_right_hand_side} =
-      Polynomial.split_constant(difference)
-
-    # The left_hand_side is a polynomial and the minus_right_side is a polynomial
-    suffix = if name do "_#{name}" else "" end
-    name = "c#{left_pad_with_zeros(problem.constraint_counter)}#{suffix}"
-
-    constraint = %Constraint{
-      name: name,
-      operator: operator,
-      left_hand_side: left_hand_side,
-      right_hand_side: -minus_right_hand_side
-    }
-
-    new_constraints = Map.put(problem.constraints, name, constraint)
-
-    new_problem = %{
-      problem
-      | constraints: new_constraints,
-        constraint_counter: problem.constraint_counter + 1
-    }
-
-    {new_problem, constraint}
-  end
-
-  defp into_textual_list(list) do
-    Enum.join(list, ", ")
-  end
-
-  defp validate_linear_constraint!(_problem, _left, _right, difference) do
-    unless Polynomial.degree(difference) < 2 do
-      raise RuntimeError, """
-      Error when adding constraint to Linear Problem. Constraint is not linear.
-      """
-    end
-  end
-
-  defp validate_constraint_variables!(problem, left, right) do
+  @doc false
+  def validate_constraint_variables!(problem, left, right) do
     syntax_colors = IO.ANSI.syntax_colors()
 
     left_extra =
@@ -235,56 +141,71 @@ defmodule Dantzig.Problem do
     end
   end
 
+  defp into_textual_list(list) do
+    Enum.join(list, ", ")
+  end
+
   defmacro with_implicit_problem(problem_variable, do: body) do
     file = __CALLER__.file
     line = __CALLER__.line
 
     Macro.prewalk(body, fn
-      {:<~, _meta1, [constraint, {:assert, _meta, [{operator, _meta2, [left, right]}]}]} ->
-        actual_operator = if operator == :==, do: :=, else: operator
+      {:decrement_objective!, _meta, [polynomial]} ->
 
         quote do
-          {unquote(problem_variable), unquote(constraint)} =
-            Dantzig.Problem.new_constraint(
+          unquote(problem_variable) =
+            Dantzig.Problem.decrement_objective(
               unquote(problem_variable),
-              unquote(left),
-              unquote(actual_operator),
-              unquote(right)
+              unquote(polynomial)
             )
         end
 
-      {:constraint!, _meta1, [{operator, _meta2, [left, right]}]} ->
-        actual_operator = if operator == :==, do: :=, else: operator
+      {:increment_objective!, _meta, [polynomial]} ->
 
         quote do
-          {unquote(problem_variable), _} =
-            Dantzig.Problem.new_constraint(
+          unquote(problem_variable) =
+            Dantzig.Problem.increment_objective(
               unquote(problem_variable),
-              unquote(left),
-              unquote(actual_operator),
-              unquote(right)
+              unquote(polynomial)
             )
         end
 
-      {:<~, _meta1, [constraint, {:assert_linear, _meta2, {operator, _meta3, [left, right]}}]} ->
-        actual_operator = if operator == :==, do: :=, else: operator
+      {:constraint!, _meta, [comparison]} ->
+        {left, operator, right} = Constraint.arguments_from_comparison!(comparison)
 
         quote do
-          {unquote(problem_variable), unquote(constraint)} =
-            Dantzig.Problem.new_linear_constraint(
+          unquote(problem_variable) =
+            Dantzig.Problem.add_constraint(
               unquote(problem_variable),
-              unquote(left),
-              unquote(actual_operator),
-              unquote(right)
+              Dantzig.Constraint.new(
+                unquote(left),
+                unquote(operator),
+                unquote(right)
+              )
             )
         end
 
-      {:<~, _meta1, [left, {f, meta2, args}]} when is_list(args) ->
-        new_function_call = {f, meta2, [problem_variable | args]}
+      {:linear_constraint!, _meta, [comparison]} ->
+        {left, operator, right} = Constraint.arguments_from_comparison!(comparison)
 
-        quote file: file, line: Keyword.get(meta2, :line, line) do
-          {unquote(problem_variable), unquote(left)} = unquote(new_function_call)
+        quote do
+          unquote(problem_variable) =
+            Dantzig.Problem.add_constraint(
+              unquote(problem_variable),
+              Dantzig.Constraint.new_linear(
+                unquote(left),
+                unquote(operator),
+                unquote(right)
+              )
+            )
         end
+
+      # {:<~, _meta1, [left, {f, meta2, args}]} when is_list(args) ->
+      #   new_function_call = {f, meta2, [problem_variable | args]}
+
+      #   quote file: file, line: Keyword.get(meta2, :line, line) do
+      #     {unquote(problem_variable), unquote(left)} = unquote(new_function_call)
+      #   end
 
       {:v!, meta1, [{var_name, _meta2, atom} | rest]} when is_atom(var_name) and is_atom(atom) ->
         unhygienic_var = Macro.var(var_name, nil)

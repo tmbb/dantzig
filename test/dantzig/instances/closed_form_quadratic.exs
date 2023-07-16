@@ -28,9 +28,20 @@ defmodule Dantzig.Instances.ClosedFormQuadraticTest do
 
     Problem.with_implicit_problem problem do
       v!(x, min: -2.0, max: 2.0)
-      _obj = Problem.increment_objective(x - x*x)
+      increment_objective!(x - x*x)
     end
 
     solution = Dantzig.solve(problem)
+
+    assert solution.model_status == "Optimal"
+    assert solution.feasibility == "Feasible"
+    # There are no constraints
+    assert solution.constraints == %{}
+    # Only a single variable is created
+    assert Solution.nr_of_variables(solution) == 1
+    # The solution is correct (within a margin of error)
+    assert_in_delta(Solution.evaluate(solution, x), 0.5, 0.0001)
+    # The objective value is correct (within a margin of error)
+    assert_in_delta(solution.objective, 0.5, 0.0001)
   end
 end

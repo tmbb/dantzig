@@ -8,9 +8,12 @@ defmodule Dantzig.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      elixirc_paths: ["lib", "test/support"]
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
+
+  def elixirc_paths(env) when env in [:dev, :test], do: ["lib", "test/support"]
+  def elixirc_paths(:prod), do: ["lib"]
 
   # Run "mix help compile.app" to learn about applications.
   def application do

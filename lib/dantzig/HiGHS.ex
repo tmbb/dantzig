@@ -2,8 +2,8 @@ defmodule Dantzig.HiGHS do
   @moduledoc false
 
   require Dantzig.Problem, as: Problem
-  alias Dantzig.Problem.Constraint
-  alias Dantzig.Problem.Variable
+  alias Dantzig.Constraint
+  alias Dantzig.ProblemVariable
   alias Dantzig.Solution
   alias Dantzig.Polynomial
 
@@ -126,7 +126,7 @@ defmodule Dantzig.HiGHS do
     ]
   end
 
-  defp variable_bounds(%Variable{} = v) do
+  defp variable_bounds(%ProblemVariable{} = v) do
     case {v.min, v.max} do
       {nil, nil} ->
         "  #{v.name} free\n"

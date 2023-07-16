@@ -8,6 +8,7 @@ defmodule Dantzig.Solution do
             variables: %{},
             constraints: %{}
 
+  def evaluate(%__MODULE__{} = _solution, number) when is_number(number), do: number
   def evaluate(%__MODULE__{} = solution, polynomial) do
     substituted = Polynomial.substitute(polynomial, solution.variables)
     case Polynomial.constant?(substituted) do

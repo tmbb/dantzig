@@ -3,6 +3,7 @@ defmodule Dantzig.ProblemTest do
   use ExUnitProperties
 
   alias Dantzig.Problem
+  alias Dantzig.Constraint
   alias Dantzig.Polynomial
 
   test "creating a problem requires specifying the optimization direction" do
@@ -84,7 +85,9 @@ defmodule Dantzig.ProblemTest do
       p_left = Polynomial.sum(variables_left) |> Polynomial.add(const1)
       p_right = Polynomial.sum(variables_right) |> Polynomial.add(const2)
 
-      {problem, constraint} = Problem.new_constraint(problem, p_left, operator, p_right)
+      problem = Problem.add_constraint(problem, Constraint.new(p_left, operator, p_right))
+
+      [constraint] = Map.values(problem.constraints)
 
       assert map_size(problem.constraints) == 1
       assert is_number(constraint.right_hand_side)

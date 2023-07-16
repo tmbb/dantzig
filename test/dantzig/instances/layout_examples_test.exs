@@ -1,6 +1,7 @@
 defmodule Danztig.Instances.LayoutExamplesTest do
   use ExUnit.Case, async: true
   require Dantzig.Problem, as: Problem
+  require Dantzig.Constraint, as: Constraint
   alias Dantzig.Solution
   use Dantzig.Polynomial.Operators
 
@@ -13,39 +14,10 @@ defmodule Danztig.Instances.LayoutExamplesTest do
     {problem, center} = Problem.new_variable(problem, "center", min: 0.0)
     {problem, right_margin} = Problem.new_variable(problem, "right_margin", min: 0.0)
 
-    {problem, _c} = Problem.new_constraint(problem, left_margin + center + right_margin == total_width)
-
-    {problem, _obj} = Problem.increment_objective(problem, center - left_margin - right_margin)
-
-    solution = Dantzig.solve(problem)
-
-    # Test properties of the solution
-    assert solution.model_status == "Optimal"
-    assert solution.feasibility == "Feasible"
-    # One constraint and three variables
-    assert Solution.nr_of_constraints(solution) == 1
-    assert Solution.nr_of_variables(solution) == 3
-    # The solution gets the right values
-    # (note: in this case, equalities should be exact)
-    assert Solution.evaluate(solution, left_margin) == 0.0
-    assert Solution.evaluate(solution, center) == 300.0
-    assert Solution.evaluate(solution, right_margin) == 0.0
-    # The objective has the right value
-    assert solution.objective == 300.0
-  end
-
-  test "trivial sum (implicit problem operations)" do
-    total_width = 300.0
-    problem = Problem.new(direction: :maximize)
-
-    Problem.with_implicit_problem problem do
-      v!(left_margin, min: 0.0)
-      v!(center, min: 0.0)
-      v!(right_margin, min: 0.0)
-
-      _c1 <~ Problem.new_constraint(left_margin + center + right_margin == total_width)
-      _obj <~ Problem.increment_objective(center - left_margin - right_margin)
-    end
+    problem =
+      problem
+      |> Problem.add_constraint(Constraint.new(left_margin + center + right_margin == total_width))
+      |> Problem.increment_objective(center - left_margin - right_margin)
 
     solution = Dantzig.solve(problem)
 
@@ -63,45 +35,6 @@ defmodule Danztig.Instances.LayoutExamplesTest do
     # The objective has the right value
     assert solution.objective == 300.0
   end
-
-  test "trivial sum (implicit == explicit)" do
-    total_width = 300.0
-
-    # Implicit problem description
-    problem_implicit = Problem.new(direction: :maximize)
-
-    Problem.with_implicit_problem problem_implicit do
-      v!(left_margin, min: 0.0)
-      v!(center, min: 0.0)
-      v!(right_margin, min: 0.0)
-
-      _c1 <~ Problem.new_constraint(left_margin + center + right_margin == total_width)
-      _obj <~ Problem.increment_objective(center - left_margin - right_margin)
-    end
-
-    # Explicit problem description (not how much more verbose it is)
-    problem_explicit = Problem.new(direction: :maximize)
-    {problem_explicit, left_margin} = Problem.new_variable(problem_explicit, "left_margin", min: 0.0)
-    {problem_explicit, center} = Problem.new_variable(problem_explicit, "center", min: 0.0)
-    {problem_explicit, right_margin} = Problem.new_variable(problem_explicit, "right_margin", min: 0.0)
-
-    {problem_explicit, _c} = Problem.new_constraint(problem_explicit, left_margin + center + right_margin == total_width)
-
-    {problem_explicit, _obj} = Problem.increment_objective(problem_explicit, center - left_margin - right_margin)
-
-    # Ensure the same problem is generated in both cases
-    assert problem_explicit == problem_implicit
-
-    # Ensure the solution is the same
-    # NOTE: since we've shown that the generated problems are the same,
-    # this test is just showing that the solver is deterministic
-    solution_implicit = Dantzig.solve(problem_implicit)
-    solution_explicit = Dantzig.solve(problem_explicit)
-
-    assert solution_implicit == solution_explicit
-  end
-
-  # From now on we'll use the implicit notation always
 
   test "more complex layout problem" do
     require Dantzig.Problem, as: Problem
@@ -115,7 +48,7 @@ defmodule Danztig.Instances.LayoutExamplesTest do
     # Define a custom utility function to specify declaratively
     # that one element fits inside another.
     fits_inside = fn problem, inside, outside ->
-      Problem.new_constraint(problem, inside <= outside)
+      Problem.add_constraint(problem, Constraint.new(inside <= outside))
     end
 
     # Suppose we need to have the sizes of our boxes calculated
@@ -149,19 +82,18 @@ defmodule Danztig.Instances.LayoutExamplesTest do
       v!(canvas2_width, min: 0.0)
       v!(canvas3_width, min: 0.0)
 
-      _c0 <~ Problem.new_constraint(canvas1_width + canvas2_width + canvas3_width == center)
-      _c1 <~ Problem.new_constraint(canvas1_width == 2*canvas2_width)
-      _c2 <~ Problem.new_constraint(canvas1_width == 2*canvas3_width)
+      # constraint!() is special syntax to add a constraint to the problem
+      constraint!(canvas1_width + canvas2_width + canvas3_width == center)
+      constraint!(canvas1_width == 2*canvas2_width)
+      constraint!(canvas1_width == 2*canvas3_width)
 
-      # Inside implicit problems, the <~ operator is rewriten so that
-      # `z <~ f(a, b, c)` becomes `{problem, z} = f(problem, a, b, c)`
-      # (where `problem` is the variable given to the macro)
-      # The first two boxes must fit in the left margin
-      _c3 <~ fits_inside.(box1_width, left_margin)
-      _c4 <~ fits_inside.(box2_width, left_margin)
-
-      # The last box must fit in the right margin
-      _c5 <~ fits_inside.(box3_width, right_margin)
+      # Now it's better to use the `problem` variable
+      problem =
+        problem
+        |> fits_inside.(box1_width, left_margin)
+        |> fits_inside.(box2_width, left_margin)
+        # The last box must fit in the right margin
+        |> fits_inside.(box3_width, right_margin)
 
       # Get the box widths from our "slow call to an external program"
       # We get the widths all at once and only once the all the variables
@@ -172,18 +104,18 @@ defmodule Danztig.Instances.LayoutExamplesTest do
         box3_width
       ])
 
-      _c6 <~ Problem.new_constraint(box1_width == box1_w)
-      _c7 <~ Problem.new_constraint(box2_width == box2_w)
-      _c8 <~ Problem.new_constraint(box3_width == box3_w)
+      constraint!(box1_width == box1_w)
+      constraint!(box2_width == box2_w)
+      constraint!(box3_width == box3_w)
 
       # All the margins must add to the given total length
       # NOTE: total_width is not a variable! It's a constant we've defined before
-      # The custom operators from the Dantzig.Polynomial.Operators module handle
+      # The custom operators from the `Dantzig.Polynomial.Operators` module handle
       # both numbers and polynomials
-      _c9 <~ Problem.new_constraint(left_margin + center + right_margin == total_width)
+      constraint!(left_margin + center + right_margin == total_width)
 
       # Minimize the margins and maximize the center
-      _obj <~ Problem.increment_objective(center - left_margin - right_margin)
+      increment_objective!(center - left_margin - right_margin)
     end
 
     solution = Dantzig.solve(problem)
