@@ -1,7 +1,7 @@
 defmodule Dantzig.Polynomial do
-  defstruct simplified: %{},
-            operations: nil,
-            substitutions: %{}
+  defstruct simplified: %{}
+
+  @type t :: %__MODULE__{}
 
   defimpl Inspect do
     import Inspect.Algebra
@@ -15,23 +15,88 @@ defmodule Dantzig.Polynomial do
     end
   end
 
-  # def fetch_single_variable_name(%__MODULE__{} = p) do
-  #   case p do
-  #     %{simplified: %{[name] => coeff} = simplified} when
-  #         coeff in [1, 1.0] and map_size(simplified) == 1 ->
-  #       {:ok, name}
+  defmacro algebra([do: ast]) do
+    replace_operators(ast)
+  end
 
-  #     _other ->
-  #       :error
-  #   end
-  # end
+  defmacro algebra(ast) do
+    replace_operators(ast)
+  end
+
+  @doc """
+  Replace operators by their polynomial versions inside a code block.
+  """
+  def replace_operators(ast) do
+    Macro.prewalk(ast, fn
+      {:+, _meta, [x, y]} ->
+        quote do
+          Dantzig.Polynomial.add(unquote(x), unquote(y))
+        end
+
+      {:-, _meta, [x, y]} ->
+        quote do
+          Dantzig.Polynomial.subtract(unquote(x), unquote(y))
+        end
+
+      {:*, _meta, [x, y]} ->
+        quote do
+          Dantzig.Polynomial.multiply(unquote(x), unquote(y))
+        end
+
+      {:/, _meta, [x, y]} ->
+        quote do
+          Dantzig.Polynomial.divide(unquote(x), unquote(y))
+        end
+
+      other ->
+        other
+    end)
+  end
+
+  def monomial(coefficient, variable) do
+    %__MODULE__{simplified: %{[variable] => coefficient}}
+  end
+
+  def coefficients(%__MODULE__{} = p) do
+    Map.values(p.simplified)
+  end
+
+  def coefficient_for(%__MODULE__{} = p, term) do
+    Map.get(p.simplified, term)
+  end
+
+  def to_number!(number) when is_number(number) do
+    number
+  end
+
+  def to_number!(%__MODULE__{} = p) do
+    if constant?(p) do
+      {_, const} = split_constant(p)
+      const
+    else
+      raise "Can't convert polynomial to number (the polynomial contains free variables)"
+    end
+  end
+
+  def to_number_if_possible(number) when is_number(number) do
+    number
+  end
+
+  def to_number_if_possible(%__MODULE__{} = p) do
+    if constant?(p) do
+      {_, const} = split_constant(p)
+      const
+    else
+      p
+    end
+  end
 
   @doc false
   def to_lp_iodata_objective(p) do
     # Raise an error if the polynomial is cubic or higher
     unless degree(p) in [0, 1, 2] do
       raise RuntimeError, """
-        Polynomials of degree < 2 are not supported by the LP solver.
+        Polynomials of degree > 2 are not supported by the LP solver.
             Please try to convert your constraints and objective function \
         into polynomials of degree 0, 1 or 2.
         """
@@ -84,10 +149,6 @@ defmodule Dantzig.Polynomial do
     terms_of_degree_0 = Map.get(by_degree, 0, [])
     terms_of_degree_1 = Map.get(by_degree, 1, [])
     terms_of_degree_2 = Map.get(by_degree, 2, [])
-
-    # doubled_terms_of_degree_2 = for {vars, coeff} <- terms_of_degree_2 do
-    #   {vars, 2 * coeff}
-    # end
 
     linear_terms = terms_of_degree_0 ++ terms_of_degree_1
     linear_terms_iodata = terms_to_iodata(linear_terms)
@@ -210,6 +271,12 @@ defmodule Dantzig.Polynomial do
     end
   end
 
+  def depends_on?(%__MODULE__{} = p, variable) do
+    Enum.find(p.simplified, fn {vars, _coeff} ->
+      Enum.find(vars, fn var -> var == variable end)
+    end)
+  end
+
   def number_of_terms(p) do
     map_size(p.simplified)
   end
@@ -218,7 +285,7 @@ defmodule Dantzig.Polynomial do
     case p.simplified do
       # The polynomial contains a constant term
       %{[] => constant_value} ->
-        # Subtrct the constant so that the subtraction of the constant
+        # Subtract the constant so that the subtraction of the constant
         # is added to the operastions
         new_p = subtract(p, constant_value)
         new_simplified = Map.delete(p.simplified, [])
@@ -233,12 +300,12 @@ defmodule Dantzig.Polynomial do
   end
 
   def const(value) when is_number(value) do
-    %__MODULE__{simplified: %{[] => value}, operations: {:const, value}}
+    %__MODULE__{simplified: %{[] => value}}
   end
 
   def variable(name) when not is_number(name) do
     # NOTE: the variable name can't be a number, otherwise it would be too confusing!
-    %__MODULE__{simplified: %{[name] => 1}, operations: {:var, name}}
+    %__MODULE__{simplified: %{[name] => 1}}
   end
 
   def term(variables, coefficient) do
@@ -247,21 +314,86 @@ defmodule Dantzig.Polynomial do
     end)
   end
 
-  def substitute(p, substitutions) when is_map(substitutions) do
-    terms =
+  def find_variables_by(%__MODULE__{} = p, fun) do
+    p.simplified
+    |> Map.values()
+    |> List.flatten()
+    |> Enum.filter(fun)
+  end
+
+  def find_variables_by(_number, _fun), do: nil
+
+  def get_variables_by(%__MODULE__{} = p, fun) do
+    p.simplified
+    |> Map.keys()
+    |> List.flatten()
+    |> Enum.filter(fun)
+  end
+
+  def get_variables_by(_number, _fun), do: []
+
+  def substitute(%__MODULE__{} = p, substitutions) when is_map(substitutions) do
+    products =
       for {vars, coeff} <- p.simplified do
         substituted_vars = Enum.map(vars, fn v -> Map.get(substitutions, v, v) end)
-        {constants, variables} = Enum.split_with(substituted_vars, &is_number/1)
-        new_coeff = coeff * Enum.product(constants)
 
-        {variables, new_coeff}
+        substituted_vars_as_polynomials = Enum.map(substituted_vars, fn var ->
+          case var do
+            # The variable is already a polynomial; we can multiply it directly
+            %__MODULE__{} ->
+              var
+
+            # The variable is something other than a polynomial
+            # We must convert it into a polynomial, multiply it and simplify it later
+            other ->
+              if is_number(other) do
+                const(other)
+              else
+                variable(other)
+              end
+          end
+        end)
+
+        multiply(product(substituted_vars_as_polynomials), coeff)
       end
 
-    simplified = merge_and_simplify_terms(terms)
-    operations = {:substitute, p.operations, substitutions}
-    substitutions = Map.merge(p.substitutions, substitutions)
+    simplified = sum(products).simplified
 
-    %__MODULE__{simplified: simplified, operations: operations, substitutions: substitutions}
+    %__MODULE__{simplified: simplified}
+  end
+
+  def substitute(constant, _substitutions) do
+    %__MODULE__{simplified: %{[] => constant}}
+  end
+
+  def replace(%__MODULE__{} = p, fun) do
+    products =
+      for {vars, coeff} <- p.simplified do
+        substituted_vars = Enum.map(vars, fn v -> fun.(v) end)
+
+        substituted_vars_as_polynomials = Enum.map(substituted_vars, fn var ->
+          case var do
+            # The variable is already a polynomial; we can multiply it directly
+            %__MODULE__{} ->
+              var
+
+            # The variable is something other than a polynomial
+            # We must convert it into a polynomial, multiply it and simplify it later
+            other ->
+              if is_number(other) do
+                const(other)
+              else
+                variable(other)
+              end
+          end
+        end)
+
+        multiply(product(substituted_vars_as_polynomials), coeff)
+      end
+
+    simplified = sum(products).simplified
+
+    %__MODULE__{simplified: simplified}
   end
 
   def evaluate(p, substitutions) when is_map(substitutions) do
@@ -298,8 +430,12 @@ defmodule Dantzig.Polynomial do
     |> Enum.max()
   end
 
+  # A number is turned into a constant
   def to_polynomial(p) when is_number(p), do: const(p)
+  # A polynomial is returned unchanged
   def to_polynomial(p) when is_struct(p, __MODULE__), do: p
+  # Everything else is returned as a variable
+  def to_polynomial(p), do: %__MODULE__{simplified: %{[p] => 1}}
 
   def variables(p) do
     p.simplified
@@ -322,9 +458,7 @@ defmodule Dantzig.Polynomial do
 
     simplified = cancel_terms(terms)
 
-    operations = {:add, p1.operations, p2.operations}
-
-    %__MODULE__{simplified: simplified, operations: operations}
+    %__MODULE__{simplified: simplified}
   end
 
   def sum(polynomials) do
@@ -343,9 +477,8 @@ defmodule Dantzig.Polynomial do
       end)
 
     simplified = cancel_terms(terms)
-    operations = {:subtract, p1.operations, p2.operations}
 
-    %__MODULE__{simplified: simplified, operations: operations}
+    %__MODULE__{simplified: simplified}
   end
 
   def scale(%__MODULE__{} = _p, m) when m in [0, 0.0] do
@@ -359,9 +492,21 @@ defmodule Dantzig.Polynomial do
       end
 
     simplified_terms = merge_and_simplify_terms(terms)
-    operations = {:scale, p.operations}
 
-    %{p | simplified: simplified_terms, operations: operations}
+    %{p | simplified: simplified_terms}
+  end
+
+  def divide(p, c) do
+    c_as_number = to_number_if_possible(c)
+
+    case c_as_number do
+      constant when is_number(constant) ->
+        multiply(p, 1/c)
+
+      %__MODULE__{} ->
+        raise ArgumentError,
+          "Polynomial #{c} is not a constant and can't be used for division"
+    end
   end
 
   def multiply(p1, p2) do
@@ -377,9 +522,14 @@ defmodule Dantzig.Polynomial do
       end
 
     simplified = merge_and_simplify_terms(terms)
-    operations = {:multiply, p1.operations, p2.operations}
 
-    %__MODULE__{simplified: simplified, operations: operations}
+    %__MODULE__{simplified: simplified}
+  end
+
+  def product(polynomials) do
+    Enum.reduce(polynomials, const(1), fn p, current_total ->
+      multiply(current_total, p)
+    end)
   end
 
   defp cancel_terms(terms) do

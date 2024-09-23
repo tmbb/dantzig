@@ -12,7 +12,8 @@ defmodule Dantzig.Constraint do
   @operators [
     :==,
     :>=,
-    :<=
+    :<=,
+    :in
   ]
 
   defmacro new(comparison, opts \\ []) do
@@ -88,12 +89,24 @@ defmodule Dantzig.Constraint do
   def arguments_from_comparison!(comparison) do
     case comparison do
       {operator, _meta, [left, right]} when operator in @operators ->
-        {left, operator, right}
+        {Polynomial.replace_operators(left), operator, Polynomial.replace_operators(right)}
 
       other ->
         raise CompileError, """
         Invalid expression in constraint: #{Macro.to_string(other)}.
         """
     end
+  end
+
+  def get_variables_by(%__MODULE__{} = constraint, fun) do
+    lhs_variables = Polynomial.get_variables_by(constraint.left_hand_side, fun)
+    rhs_variables = Polynomial.get_variables_by(constraint.right_hand_side, fun)
+
+    # Merge all variables
+    all_variables = lhs_variables ++ rhs_variables
+
+    # Don't return the same variable twice in the unlikely case that we have
+    # a constraint with the same variable on both sides
+    Enum.uniq(all_variables)
   end
 end

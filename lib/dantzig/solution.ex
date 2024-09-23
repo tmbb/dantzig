@@ -28,7 +28,7 @@ defmodule Dantzig.Solution do
     map_size(solution.variables)
   end
 
-  def from_file!(file_contents) do
+  def from_file_contents!(file_contents) do
     opts = Parser.parse!(file_contents)
     struct(__MODULE__, opts)
   end

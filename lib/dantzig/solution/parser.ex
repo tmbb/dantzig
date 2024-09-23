@@ -1,4 +1,5 @@
 defmodule Dantzig.Solution.Parser do
+  @moduledoc false
   import NimbleParsec
 
   @example_solution """
@@ -65,12 +66,21 @@ defmodule Dantzig.Solution.Parser do
     |> ascii_string([?0..?9], min: 1)
     |> reduce(:build_float)
 
+  exponential_notation_float =
+    optional(string("-"))
+    |> ascii_string([?0..?9], min: 1)
+    |> optional(string(".") |> ascii_string([?0..?9], min: 1))
+    |> string("e")
+    |> optional(string("-"))
+    |> ascii_string([?0..?9], min: 1)
+    |> reduce(:build_float)
+
   integer =
     optional(string("-"))
     |> ascii_string([?0..?9], min: 1)
     |> reduce(:build_integer)
 
-  number = choice([float, integer])
+  number = choice([exponential_notation_float, float, integer])
 
   feasibility =
     line |> unwrap_and_tag(:feasibility)

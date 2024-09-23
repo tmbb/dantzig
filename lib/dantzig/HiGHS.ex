@@ -13,6 +13,7 @@ defmodule Dantzig.HiGHS do
 
   def solve(%Problem{} = problem) do
     iodata = to_lp_iodata(problem)
+
     command = Path.join(:code.priv_dir(:dantzig), @highs_command_linux)
 
     with_temporary_files(["model.lp", "solution.lp"], fn [model_path, solution_path] ->
@@ -43,7 +44,7 @@ defmodule Dantzig.HiGHS do
               """
         end
 
-      Solution.from_file!(solution_contents)
+      Solution.from_file_contents!(solution_contents)
     end)
   end
 
@@ -102,7 +103,7 @@ defmodule Dantzig.HiGHS do
   defp direction_to_iodata(:maximize), do: "Maximize"
   defp direction_to_iodata(:minimize), do: "Minimize"
 
-  defp to_lp_iodata(%Problem{} = problem) do
+  def to_lp_iodata(%Problem{} = problem) do
     constraints = Enum.sort(problem.constraints)
 
     constraints_iodata =

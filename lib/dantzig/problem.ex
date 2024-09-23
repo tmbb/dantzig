@@ -3,6 +3,8 @@ defmodule Dantzig.Problem do
   alias Dantzig.ProblemVariable
   alias Dantzig.Constraint
 
+  @nr_of_zeros 8
+
   defstruct variable_counter: 0,
             constraint_counter: 0,
             objective: Polynomial.const(0.0),
@@ -44,7 +46,7 @@ defmodule Dantzig.Problem do
   end
 
   defp left_pad_with_zeros(number) when is_integer(number) do
-    String.pad_leading(to_string(number), 5, "0")
+    String.pad_leading(to_string(number), @nr_of_zeros, "0")
   end
 
   def increment_objective(problem, polynomial) do
@@ -69,8 +71,35 @@ defmodule Dantzig.Problem do
     end
   end
 
-  def new_variable(%__MODULE__{} = problem, suffix, opts \\ []) when is_binary(suffix) do
-    name = "x#{left_pad_with_zeros(problem.variable_counter)}_#{suffix}"
+  def new_unmangled_variable(%__MODULE__{} = problem, name, opts \\ []) do
+    min = Keyword.get(opts, :min, nil)
+    max = Keyword.get(opts, :max, nil)
+    type = Keyword.get(opts, :type, :real)
+
+    variable = %ProblemVariable{name: name, min: min, max: max, type: type}
+    monomial = Polynomial.variable(name)
+    new_variables = Map.put(problem.variables, name, variable)
+
+    # Even though we don't use the counter, it's better to increment it
+    # for the sake of consistency
+
+    new_problem = %{
+      problem
+      | variables: new_variables,
+        variable_counter: problem.variable_counter + 1
+    }
+
+    {new_problem, monomial}
+  end
+
+  def new_variable(%__MODULE__{} = problem, suffix, opts \\ []) do
+    name =
+      if is_binary(suffix) do
+        "x#{left_pad_with_zeros(problem.variable_counter)}_#{suffix}"
+      else
+        suffix
+      end
+
     min = Keyword.get(opts, :min, nil)
     max = Keyword.get(opts, :max, nil)
     type = Keyword.get(opts, :type, :real)

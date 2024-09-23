@@ -1,13 +1,13 @@
 defmodule Dantzig.Instances.ClosedFormQuadraticTest do
   use ExUnit.Case, async: true
   require Dantzig.Problem, as: Problem
-  use Dantzig.Polynomial.Operators
 
   test "closed form quadratic: x - x*x" do
-    problem = Problem.new(direction: :maximize)
-
-    {problem, x} = Problem.new_variable(problem, "x", min: -2.0, max: 2.0)
-    {problem, _obj} = Problem.increment_objective(problem, x - x*x)
+    Polynomial.algebra do
+      problem = Problem.new(direction: :maximize)
+      {problem, x} = Problem.new_variable(problem, "x", min: -2.0, max: 2.0)
+      {problem, _obj} = Problem.increment_objective(problem, x - x*x)
+    end
 
     solution = Dantzig.solve(problem)
 
@@ -24,11 +24,12 @@ defmodule Dantzig.Instances.ClosedFormQuadraticTest do
   end
 
   test "closed form quadratic: x - x*x (implicit problem)" do
-    problem = Problem.new(direction: :maximize)
-
-    Problem.with_implicit_problem problem do
-      v!(x, min: -2.0, max: 2.0)
-      increment_objective!(x - x*x)
+    Polynomial.algebra do
+      problem = Problem.new(direction: :maximize)
+      Problem.with_implicit_problem problem do
+        v!(x, min: -2.0, max: 2.0)
+        increment_objective!(x - x*x)
+      end
     end
 
     solution = Dantzig.solve(problem)
