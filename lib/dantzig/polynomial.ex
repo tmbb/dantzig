@@ -391,9 +391,7 @@ defmodule Dantzig.Polynomial do
         multiply(product(substituted_vars_as_polynomials), coeff)
       end
 
-    simplified = sum(products).simplified
-
-    %__MODULE__{simplified: simplified}
+      sum(products)
   end
 
   def evaluate(p, substitutions) when is_map(substitutions) do

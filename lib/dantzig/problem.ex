@@ -94,10 +94,15 @@ defmodule Dantzig.Problem do
 
   def new_variable(%__MODULE__{} = problem, suffix, opts \\ []) do
     name =
-      if is_binary(suffix) do
-        "x#{left_pad_with_zeros(problem.variable_counter)}_#{suffix}"
-      else
-        suffix
+      case suffix do
+        bin when is_binary(bin) ->
+          "x#{left_pad_with_zeros(problem.variable_counter)}_#{suffix}"
+
+        nil ->
+          raise "Suffix can't be nil!"
+
+        other ->
+          other
       end
 
     min = Keyword.get(opts, :min, nil)
