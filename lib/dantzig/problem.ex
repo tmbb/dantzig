@@ -31,9 +31,9 @@ defmodule Dantzig.Problem do
   def add_constraint(problem, constraint) do
     constraint_id =
       if constraint.name do
-        "c#{problem.constraint_counter}_#{constraint.name}"
+        "c#{left_pad_with_zeros(problem.constraint_counter)}_#{constraint.name}"
       else
-        "c#{problem.constraint_counter}"
+        "c#{left_pad_with_zeros(problem.constraint_counter)}"
       end
 
     # Add the unique ID as a new name for the constraint;
@@ -93,10 +93,18 @@ defmodule Dantzig.Problem do
   end
 
   def new_variable(%__MODULE__{} = problem, suffix, opts \\ []) do
+    prefix = Keyword.get(opts, :prefix, nil)
+
     name =
       case suffix do
         bin when is_binary(bin) ->
-          "x#{left_pad_with_zeros(problem.variable_counter)}_#{suffix}"
+          case prefix do
+            nil ->
+              "x#{left_pad_with_zeros(problem.variable_counter)}_#{suffix}"
+
+            bin2 when is_binary(bin2) ->
+              "x#{left_pad_with_zeros(problem.variable_counter)}_#{prefix}_#{suffix}"
+          end
 
         nil ->
           raise "Suffix can't be nil!"
