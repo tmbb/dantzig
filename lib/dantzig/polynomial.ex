@@ -15,10 +15,6 @@ defmodule Dantzig.Polynomial do
     end
   end
 
-  defmacro algebra([do: ast]) do
-    replace_operators(ast)
-  end
-
   defmacro algebra(ast) do
     replace_operators(ast)
   end
@@ -96,10 +92,10 @@ defmodule Dantzig.Polynomial do
     # Raise an error if the polynomial is cubic or higher
     unless degree(p) in [0, 1, 2] do
       raise RuntimeError, """
-        Polynomials of degree > 2 are not supported by the LP solver.
-            Please try to convert your constraints and objective function \
-        into polynomials of degree 0, 1 or 2.
-        """
+      Polynomials of degree > 2 are not supported by the LP solver.
+          Please try to convert your constraints and objective function \
+      into polynomials of degree 0, 1 or 2.
+      """
     end
 
     # The degree of all terms will be at maximum two from now on
@@ -110,9 +106,10 @@ defmodule Dantzig.Polynomial do
     terms_of_degree_1 = Map.get(by_degree, 1, [])
     terms_of_degree_2 = Map.get(by_degree, 2, [])
 
-    doubled_terms_of_degree_2 = for {vars, coeff} <- terms_of_degree_2 do
-      {vars, 2 * coeff}
-    end
+    doubled_terms_of_degree_2 =
+      for {vars, coeff} <- terms_of_degree_2 do
+        {vars, 2 * coeff}
+      end
 
     linear_terms = terms_of_degree_0 ++ terms_of_degree_1
     linear_terms_iodata = terms_to_iodata(linear_terms)
@@ -122,7 +119,8 @@ defmodule Dantzig.Polynomial do
         [] ->
           ""
 
-        _other ->[
+        _other ->
+          [
             " + [ ",
             terms_to_iodata(doubled_terms_of_degree_2),
             " ] / 2"
@@ -136,10 +134,10 @@ defmodule Dantzig.Polynomial do
     # Raise an error if the polynomial is cubic or higher
     unless degree(p) in [0, 1, 2] do
       raise RuntimeError, """
-        Polynomials of degree < 2 are not supported by the LP solver.
-            Please try to convert your constraints and objective function \
-        into polynomials of degree 0, 1 or 2.
-        """
+      Polynomials of degree < 2 are not supported by the LP solver.
+          Please try to convert your constraints and objective function \
+      into polynomials of degree 0, 1 or 2.
+      """
     end
 
     # The degree of all terms will be at maximum two from now on
@@ -158,7 +156,8 @@ defmodule Dantzig.Polynomial do
         [] ->
           ""
 
-        _other ->[
+        _other ->
+          [
             " + [ ",
             terms_to_iodata(terms_of_degree_2),
             " ]"
@@ -205,7 +204,6 @@ defmodule Dantzig.Polynomial do
         ["- ", coeff1, " ", vars1, " " | rest_of_coeffs_to_iodata(rest)]
     end
   end
-
 
   defp vars_to_iodata([]), do: ""
 
@@ -337,22 +335,23 @@ defmodule Dantzig.Polynomial do
       for {vars, coeff} <- p.simplified do
         substituted_vars = Enum.map(vars, fn v -> Map.get(substitutions, v, v) end)
 
-        substituted_vars_as_polynomials = Enum.map(substituted_vars, fn var ->
-          case var do
-            # The variable is already a polynomial; we can multiply it directly
-            %__MODULE__{} ->
-              var
+        substituted_vars_as_polynomials =
+          Enum.map(substituted_vars, fn var ->
+            case var do
+              # The variable is already a polynomial; we can multiply it directly
+              %__MODULE__{} ->
+                var
 
-            # The variable is something other than a polynomial
-            # We must convert it into a polynomial, multiply it and simplify it later
-            other ->
-              if is_number(other) do
-                const(other)
-              else
-                variable(other)
-              end
-          end
-        end)
+              # The variable is something other than a polynomial
+              # We must convert it into a polynomial, multiply it and simplify it later
+              other ->
+                if is_number(other) do
+                  const(other)
+                else
+                  variable(other)
+                end
+            end
+          end)
 
         multiply(product(substituted_vars_as_polynomials), coeff)
       end
@@ -371,27 +370,28 @@ defmodule Dantzig.Polynomial do
       for {vars, coeff} <- p.simplified do
         substituted_vars = Enum.map(vars, fn v -> fun.(v) end)
 
-        substituted_vars_as_polynomials = Enum.map(substituted_vars, fn var ->
-          case var do
-            # The variable is already a polynomial; we can multiply it directly
-            %__MODULE__{} ->
-              var
+        substituted_vars_as_polynomials =
+          Enum.map(substituted_vars, fn var ->
+            case var do
+              # The variable is already a polynomial; we can multiply it directly
+              %__MODULE__{} ->
+                var
 
-            # The variable is something other than a polynomial
-            # We must convert it into a polynomial, multiply it and simplify it later
-            other ->
-              if is_number(other) do
-                const(other)
-              else
-                variable(other)
-              end
-          end
-        end)
+              # The variable is something other than a polynomial
+              # We must convert it into a polynomial, multiply it and simplify it later
+              other ->
+                if is_number(other) do
+                  const(other)
+                else
+                  variable(other)
+                end
+            end
+          end)
 
         multiply(product(substituted_vars_as_polynomials), coeff)
       end
 
-      sum(products)
+    sum(products)
   end
 
   def evaluate(p, substitutions) when is_map(substitutions) do
@@ -499,11 +499,11 @@ defmodule Dantzig.Polynomial do
 
     case c_as_number do
       constant when is_number(constant) ->
-        multiply(p, 1/c)
+        multiply(p, 1 / c)
 
       %__MODULE__{} ->
         raise ArgumentError,
-          "Polynomial #{c} is not a constant and can't be used for division"
+              "Polynomial #{c} is not a constant and can't be used for division"
     end
   end
 

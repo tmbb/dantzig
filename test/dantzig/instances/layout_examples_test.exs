@@ -17,11 +17,13 @@ defmodule Danztig.Instances.LayoutExampleTest do
 
       problem =
         problem
-        |> Problem.add_constraint(Constraint.new(left_margin + center + right_margin == total_width))
+        |> Problem.add_constraint(
+          Constraint.new(left_margin + center + right_margin == total_width)
+        )
         |> Problem.increment_objective(center - left_margin - right_margin)
     end
 
-    solution = Dantzig.solve(problem)
+    solution = Dantzig.solve!(problem)
 
     # Test properties of the solution
     assert solution.model_status == "Optimal"

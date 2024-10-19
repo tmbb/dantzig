@@ -1,14 +1,20 @@
 defmodule Dantzig.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :dantzig,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      elixirc_paths: elixirc_paths(Mix.env())
+      elixirc_paths: elixirc_paths(Mix.env()),
+      package: package(),
+      name: "Danztig",
+      description: "Linear progamming solver for elixir",
+      source_url: "https://github.com/tmbb/dantzig"
     ]
   end
 
@@ -26,7 +32,17 @@ defmodule Dantzig.MixProject do
   defp deps do
     [
       {:nimble_parsec, "~> 1.0"},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:stream_data, "~> 0.5", only: [:test, :dev]}
+    ]
+  end
+
+  defp package() do
+    [
+      # These are the default files included in the package
+      files: ~w(lib priv .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/tmbb/dantzig"}
     ]
   end
 end

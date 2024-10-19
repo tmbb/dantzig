@@ -10,6 +10,11 @@ defmodule Dantzig do
     HiGHS.solve(problem)
   end
 
+  def solve!(%Problem{} = problem) do
+    {:ok, solution} = HiGHS.solve(problem)
+    solution
+  end
+
   def dump_problem_to_file(%Problem{} = problem, path) do
     iodata = HiGHS.to_lp_iodata(problem)
     File.write!(path, iodata)

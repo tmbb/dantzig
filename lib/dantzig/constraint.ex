@@ -5,7 +5,8 @@ defmodule Dantzig.Constraint do
   defstruct name: nil,
             operator: nil,
             left_hand_side: nil,
-            right_hand_side: nil
+            right_hand_side: nil,
+            metadata: nil
 
   alias Dantzig.Polynomial
 
@@ -66,7 +67,7 @@ defmodule Dantzig.Constraint do
   end
 
   defp new_constraint_from_difference(difference, operator, name)
-        when operator in @operators do
+       when operator in @operators do
     {%Polynomial{} = left_hand_side, minus_right_hand_side} =
       Polynomial.split_constant(difference)
 

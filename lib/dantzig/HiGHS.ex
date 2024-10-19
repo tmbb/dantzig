@@ -3,6 +3,7 @@ defmodule Dantzig.HiGHS do
 
   require Dantzig.Problem, as: Problem
   alias Dantzig.Constraint
+  alias Dantzig.ConstraintMetadata
   alias Dantzig.ProblemVariable
   alias Dantzig.Solution
   alias Dantzig.Polynomial
@@ -31,21 +32,31 @@ defmodule Dantzig.HiGHS do
           {:ok, contents} ->
             contents
 
-          {:error, :enoent} ->
+          {:error, _} ->
             raise RuntimeError, """
-              Couldn't generate a solution for the given problem.
+            Couldn't generate a solution for the given problem.
 
-              Input problem/model file:
+            Input problem/model file:
 
-              #{indent(iodata, 4)}
-              Output from the HiGHS solver:
+            #{indent(iodata, 4)}
+            Output from the HiGHS solver:
 
-              #{indent(output, 4)}
-              """
+            #{indent(output, 4)}
+            """
         end
 
-      Solution.from_file_contents!(solution_contents)
+      Solution.from_file_contents(solution_contents)
     end)
+  end
+
+  def solve!(%Problem{} = problem) do
+    case solve(problem) do
+      {:ok, solution} ->
+        solution
+
+      :error ->
+        raise ArgumentError, "Infeasible problem!"
+    end
   end
 
   defp indent(iodata, indent_level) do
@@ -81,6 +92,7 @@ defmodule Dantzig.HiGHS do
 
   defp constraint_to_iodata(constraint = %Constraint{}) do
     [
+      ConstraintMetadata.to_lp_comment(constraint.metadata),
       "  ",
       constraint.name,
       ": ",

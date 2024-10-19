@@ -21,9 +21,10 @@ defmodule Dantzig.ProblemTest do
   end
 
   property "can create a variable with the given suffix" do
-    check all suffix <- StreamData.string([?a..?z, ?A..?Z, ?0..?9, ?_], min_length: 1),
-              direction <- StreamData.one_of([:minimize, :maximize]) do
-
+    check all(
+            suffix <- StreamData.string([?a..?z, ?A..?Z, ?0..?9, ?_], min_length: 1),
+            direction <- StreamData.one_of([:minimize, :maximize])
+          ) do
       problem = Problem.new(direction: direction)
       {problem, variable} = Problem.new_variable(problem, suffix)
 
@@ -40,8 +41,10 @@ defmodule Dantzig.ProblemTest do
   end
 
   test "variables are monomials (i.e. have a single term) of degree 1 and with no constant term" do
-    check all suffix <- StreamData.string([?a..?z, ?A..?Z, ?0..?9, ?_], min_length: 1),
-              direction <- StreamData.one_of([:minimize, :maximize]) do
+    check all(
+            suffix <- StreamData.string([?a..?z, ?A..?Z, ?0..?9, ?_], min_length: 1),
+            direction <- StreamData.one_of([:minimize, :maximize])
+          ) do
       problem = Problem.new(direction: direction)
       {_problem, variable} = Problem.new_variable(problem, suffix)
 

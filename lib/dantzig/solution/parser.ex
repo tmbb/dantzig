@@ -2,37 +2,11 @@ defmodule Dantzig.Solution.Parser do
   @moduledoc false
   import NimbleParsec
 
-  @example_solution """
-  Model status
-  Optimal
-
-  # Primal solution values
-  Feasible
-  Objective 0.499999975
-  # Columns 1
-  x00000_x 0.499999975
-  # Rows 1
-  c00000 0.499999975
-
-  # Dual solution values
-  Feasible
-  # Columns 1
-  x00000_x 0
-  # Rows 1
-  c00000 0
-
-  # Basis
-  HiGHS v1
-  None
-  """
-
   newline =
-    ignore(
-      choice([
-        string("\r\n"),
-        string("\n")
-      ])
-    )
+    choice([
+      string("\r\n"),
+      string("\n")
+    ])
 
   skipping_newlines = fn combinators ->
     Enum.reduce(combinators, empty(), fn comb, acc ->
@@ -55,7 +29,7 @@ defmodule Dantzig.Solution.Parser do
   line = utf8_string([not: ?\n, not: ?\r], min: 0)
 
   model_status =
-    ignore(string("Model status") |> concat(newline))
+    ignore(string("Model status") |> concat(ignore(newline)))
     |> concat(line)
     |> unwrap_and_tag(:model_status)
 
@@ -85,9 +59,9 @@ defmodule Dantzig.Solution.Parser do
   feasibility =
     line |> unwrap_and_tag(:feasibility)
 
+  # Assume that the objective is separated from the value
+  # by only a single space
   objective =
-    # Assume that the objective is separated from the value
-    # by only a single space
     ignore(string("Objective "))
     |> concat(number)
     |> unwrap_and_tag(:objective)
@@ -104,12 +78,15 @@ defmodule Dantzig.Solution.Parser do
 
   columns =
     skipping_newlines.([
-      ignore(string("# Columns ") |> concat(integer) |> concat(newline)),
+      ignore(
+        string("# Columns ")
+        |> concat(integer)
+      ),
       repeat(
         variable
         |> ignore(string(" "))
         |> concat(number)
-        |> concat(newline)
+        |> concat(ignore(newline))
         |> reduce(:build_variable)
       )
     ])
@@ -118,12 +95,16 @@ defmodule Dantzig.Solution.Parser do
 
   rows =
     skipping_newlines.([
-      ignore(string("# Rows ") |> concat(integer) |> concat(newline)),
+      ignore(
+        string("# Rows ")
+        |> concat(integer)
+        |> concat(newline)
+      ),
       repeat(
         variable
         |> ignore(string(" "))
         |> concat(number)
-        |> concat(newline)
+        |> concat(ignore(newline))
         |> reduce(:build_variable)
       )
     ])
@@ -132,7 +113,10 @@ defmodule Dantzig.Solution.Parser do
 
   primal_solution_values =
     skipping_newlines.([
-      ignore(string("# Primal solution values") |> concat(newline)),
+      ignore(
+        string("# Primal solution values")
+        |> concat(ignore(newline))
+      ),
       feasibility,
       objective,
       columns,
@@ -145,14 +129,20 @@ defmodule Dantzig.Solution.Parser do
       primal_solution_values
     ])
 
-  defparsec :solution_file, solution_file
+  defparsec(:solution_file, solution_file)
 
   def parse!(text) do
     {:ok, parsed, _rest, _context, _, _} = solution_file(text)
     parsed
   end
 
-  def example() do
-    parse!(@example_solution)
+  def parse(text) do
+    case solution_file(text) do
+      {:ok, parsed, _rest, _context, _, _} ->
+        {:ok, parsed}
+
+      _other ->
+        {:error, text}
+    end
   end
 end

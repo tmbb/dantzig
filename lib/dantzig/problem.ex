@@ -10,7 +10,8 @@ defmodule Dantzig.Problem do
             objective: Polynomial.const(0.0),
             direction: nil,
             variables: %{},
-            constraints: %{}
+            constraints: %{},
+            contraints_metadata: %{}
 
   def new(opts) when is_list(opts) do
     direction =
@@ -28,7 +29,7 @@ defmodule Dantzig.Problem do
     %__MODULE__{direction: direction}
   end
 
-  def add_constraint(problem, constraint) do
+  def add_constraint(problem, constraint, metadata \\ nil) do
     constraint_id =
       if constraint.name do
         "c#{left_pad_with_zeros(problem.constraint_counter)}_#{constraint.name}"
@@ -38,11 +39,15 @@ defmodule Dantzig.Problem do
 
     # Add the unique ID as a new name for the constraint;
     # Because of how we serialize linear problems, the constraint name should be unique.
-    new_constraint = %{constraint | name: constraint_id}
+    new_constraint = %{constraint | name: constraint_id, metadata: metadata}
 
     new_constraints = Map.put(problem.constraints, constraint_id, new_constraint)
 
-    %{problem | constraints: new_constraints, constraint_counter: problem.constraint_counter + 1}
+    %{
+      problem
+      | constraints: new_constraints,
+        constraint_counter: problem.constraint_counter + 1
+    }
   end
 
   defp left_pad_with_zeros(number) when is_integer(number) do
@@ -193,7 +198,6 @@ defmodule Dantzig.Problem do
 
     Macro.prewalk(body, fn
       {:decrement_objective!, _meta, [polynomial]} ->
-
         quote do
           unquote(problem_variable) =
             Dantzig.Problem.decrement_objective(
@@ -203,7 +207,6 @@ defmodule Dantzig.Problem do
         end
 
       {:increment_objective!, _meta, [polynomial]} ->
-
         quote do
           unquote(problem_variable) =
             Dantzig.Problem.increment_objective(

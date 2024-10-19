@@ -1,7 +1,7 @@
 # Dantzig
 
 Opimitizion library for elixir, using the HiGHS solver.
-Supports linear programming (LP), mixed linear integer programming (MILP) and quadratic programming (QP). 
+Supports linear programming (LP), mixed linear integer programming (MILP) and quadratic programming (QP).
 
 ## Installation
 
