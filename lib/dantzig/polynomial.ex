@@ -44,6 +44,11 @@ defmodule Dantzig.Polynomial do
           Dantzig.Polynomial.divide(unquote(x), unquote(y))
         end
 
+      {:-, _meta, [x]} ->
+        quote do
+          Dantzig.Polynomial.subtract(0, unquote(x))
+        end
+
       other ->
         other
     end)
@@ -160,7 +165,7 @@ defmodule Dantzig.Polynomial do
           [
             " + [ ",
             terms_to_iodata(terms_of_degree_2),
-            " ]"
+            " ] / 2"
           ]
       end
 
@@ -269,10 +274,21 @@ defmodule Dantzig.Polynomial do
     end
   end
 
+  def depends_on?(number, _variable) when is_number(number) do
+    nil
+  end
+
   def depends_on?(%__MODULE__{} = p, variable) do
-    Enum.find(p.simplified, fn {vars, _coeff} ->
-      Enum.find(vars, fn var -> var == variable end)
-    end)
+    result =
+      Enum.find(p.simplified, fn {vars, _coeff} ->
+        Enum.find(vars, fn var -> var == variable end)
+      end)
+
+    if result == nil do
+      false
+    else
+      true
+    end
   end
 
   def number_of_terms(p) do

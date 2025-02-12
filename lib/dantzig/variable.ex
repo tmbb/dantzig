@@ -4,4 +4,6 @@ defmodule Dantzig.ProblemVariable do
             min: nil,
             max: nil,
             type: :real
+
+  @type variable_name :: binary()
 end

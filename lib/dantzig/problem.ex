@@ -2,8 +2,11 @@ defmodule Dantzig.Problem do
   alias Dantzig.Polynomial
   alias Dantzig.ProblemVariable
   alias Dantzig.Constraint
+  alias Dantzig.SolvedConstraint
 
   @nr_of_zeros 8
+
+  @type t :: %__MODULE__{}
 
   defstruct variable_counter: 0,
             constraint_counter: 0,
@@ -13,6 +16,29 @@ defmodule Dantzig.Problem do
             constraints: %{},
             contraints_metadata: %{}
 
+  @spec solve_for_all_variables(t()) :: %{ProblemVariable.variable_namme() => SolvedConstraint.t()}
+  def solve_for_all_variables(%__MODULE__{} = problem) do
+    # There are two ways of solving for all variables:
+    #
+    #   1. Iterate over all variables and solve constraints that depend on that variable
+    #   2. Iterate over all constraints and solve for the variables in each constraint
+    #
+    # The second one is much more performant, so we pick that one
+    Enum.reduce(problem.constraints, %{}, fn {_constraint_name, constraint}, solved_constraints ->
+      # Get all variables from that constraint
+      variable_names = Polynomial.variables(constraint.left_hand_side)
+      # Iterate over all constraints
+      Enum.reduce(variable_names, solved_constraints, fn variable_name, solved_constraints ->
+        # Put the new solved constraint in the constraint map
+        solved_constraint = Constraint.solve_for_variable(constraint, variable_name)
+        Map.update(solved_constraints, variable_name, [solved_constraint], fn constraints ->
+          [solved_constraint | constraints]
+        end)
+      end)
+    end)
+  end
+
+  @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
     direction =
       case Keyword.fetch(opts, :direction) do
@@ -29,6 +55,7 @@ defmodule Dantzig.Problem do
     %__MODULE__{direction: direction}
   end
 
+  @spec add_constraint(t(), Constraint.t(), ConstraintMetadata.t()) :: t()
   def add_constraint(problem, constraint, metadata \\ nil) do
     constraint_id =
       if constraint.name do
@@ -121,6 +148,12 @@ defmodule Dantzig.Problem do
     min = Keyword.get(opts, :min, nil)
     max = Keyword.get(opts, :max, nil)
     type = Keyword.get(opts, :type, :real)
+
+    # Convert min and max to numbers.
+    # They might have been converted into polynomials by the
+    # overloadad operators.
+    min = min && Polynomial.to_number!(min)
+    max = max && Polynomial.to_number!(max)
 
     variable = %ProblemVariable{name: name, min: min, max: max, type: type}
     monomial = Polynomial.variable(name)

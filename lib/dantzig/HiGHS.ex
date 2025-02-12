@@ -2,6 +2,7 @@ defmodule Dantzig.HiGHS do
   @moduledoc false
 
   require Dantzig.Problem, as: Problem
+  alias Dantzig.Config
   alias Dantzig.Constraint
   alias Dantzig.ConstraintMetadata
   alias Dantzig.ProblemVariable
@@ -9,13 +10,11 @@ defmodule Dantzig.HiGHS do
   alias Dantzig.Polynomial
 
   @max_random_prefix 2 ** 32
-  # We only support linux right now
-  @highs_command_linux "solver/x86_64-linux-gnu/highs"
 
   def solve(%Problem{} = problem) do
     iodata = to_lp_iodata(problem)
 
-    command = Path.join(:code.priv_dir(:dantzig), @highs_command_linux)
+    command = Config.default_solver_path()
 
     with_temporary_files(["model.lp", "solution.lp"], fn [model_path, solution_path] ->
       File.write!(model_path, iodata)

@@ -24,7 +24,7 @@ defmodule Dantzig.Instances.ClosedFormQuadraticTest do
     # The solution is correct (within a margin of error)
     assert_in_delta(Solution.evaluate(solution, x), 0.5, 0.0001)
     # The objective value is correct (within a margin of error)
-    assert_in_delta(solution.objective, 0.5, 0.0001)
+    assert_in_delta(solution.objective, 0.25, 0.0001)
   end
 
   test "closed form quadratic: x - x*x (implicit problem)" do
@@ -48,6 +48,6 @@ defmodule Dantzig.Instances.ClosedFormQuadraticTest do
     # The solution is correct (within a margin of error)
     assert_in_delta(Solution.evaluate(solution, x), 0.5, 0.0001)
     # The objective value is correct (within a margin of error)
-    assert_in_delta(solution.objective, 0.5, 0.0001)
+    assert_in_delta(solution.objective, 0.25, 0.0001)
   end
 end
