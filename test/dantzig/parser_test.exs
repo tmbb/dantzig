@@ -3,9 +3,12 @@ defmodule Dantzig.ParserTest do
 
   alias Dantzig.Solution
 
-  # TODO: find out why this doesn't work!
-  @tag skip: true
+
   test "parses solution correctly" do
+    # Historical note: at one point in time, this test was mysteriously
+    # failing because of a bug in `Solution.from_file_contents!/1`
+    # was calling itself recursively leading to an infinite call stack.
+
     solution_text = """
 
     Model status
@@ -17,6 +20,7 @@ defmodule Dantzig.ParserTest do
     # Columns 1
     x00000_x 0.499999975
     # Rows 0
+    c00000 0
 
     # Dual solution values
     Feasible

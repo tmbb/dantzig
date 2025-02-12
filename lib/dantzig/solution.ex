@@ -41,7 +41,7 @@ defmodule Dantzig.Solution do
   end
 
   def from_file_contents!(file_contents) do
-    {:ok, result} = from_file_contents!(file_contents)
+    {:ok, result} = from_file_contents(file_contents)
     result
   end
 end

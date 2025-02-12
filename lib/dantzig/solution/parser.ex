@@ -98,13 +98,11 @@ defmodule Dantzig.Solution.Parser do
       ignore(
         string("# Rows ")
         |> concat(integer)
-        |> concat(newline)
       ),
       repeat(
         variable
         |> ignore(string(" "))
         |> concat(number)
-        |> concat(ignore(newline))
         |> reduce(:build_variable)
       )
     ])

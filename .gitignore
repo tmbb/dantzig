@@ -25,4 +25,7 @@ dantzig-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+# The solver binary
+/priv/bin/
+
 *.log
