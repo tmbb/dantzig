@@ -2,6 +2,86 @@ defmodule Dantzig.HiGHSDownloader do
   alias Dantzig.Config
   require Logger
 
+  @external_resource Dantzig.Config.get_highs_binary_path()
+
+  def maybe_download_for_target() do
+    downloaded_version = Config.read_downloaded_version()
+    highs_version = Config.get_highs_version()
+    binary_path = Config.get_highs_binary_path()
+    default_binary_path = Config.default_highs_binary_path()
+
+    # We only download the binary if the user hasn't specified
+    # a new binary path. If users decide to use a different binary,
+    # they're on their own.
+    if default_binary_path == binary_path do
+      # The user hasn't specified a custom path;
+      # We'll download the binary if appropriate.
+      case {File.exists?(binary_path), downloaded_version == highs_version} do
+        {true, true} ->
+          # The binary exists and the version matches the one given by the user;
+          # Do nothing
+          :ok
+
+        {false, true} ->
+          # For some reason, we have a version file but not a binary.
+          # Download the binary again
+          download_for_target(highs_version, target())
+
+        {_, false} ->
+          # The current version doesn't match the one given by the user.
+          # Download the binary again and write a new version number
+          download_for_target(highs_version, target())
+      end
+    else
+      # Do nothing
+      :ok
+    end
+  end
+
+  def download_for_target(version, target) do
+    url = tar_gz_url(version, target)
+
+    Logger.debug("Downloading HiGHS solver from #{url}")
+
+    tar_archive = fetch_file!(url)
+
+    random_suffix = 1..100_000_000 |> Enum.random() |> to_string()
+    unpack_dir = "unpacked_#{random_suffix}"
+    tmp_dir = System.tmp_dir!() |> Path.join(unpack_dir)
+
+    unpacked =
+      :erl_tar.extract({:binary, tar_archive}, [
+        :compressed,
+        files: ['bin/highs'],
+        cwd: to_charlist(tmp_dir)
+      ])
+
+    case unpacked do
+      :ok -> :ok
+      {:error, :eof} ->
+        # Even if `:erl_tar.extract/2` return this error,
+        # it seems like it unpacks the file correctly
+        :ok
+      other -> raise "couldn't unpack archive: #{inspect(other)}"
+    end
+
+    bin_path = Path.join([tmp_dir, "bin", "highs"])
+
+    dst_path = Config.default_highs_binary_path()
+
+    # Create the destination directory if
+    # it does not exist
+    dst_dir = Path.dirname(dst_path)
+    File.mkdir_p!(dst_dir)
+
+    # Write the artifact and version number
+    # (overwriting previously written files if needed)
+    Config.persist_downloaded_version(version)
+    File.cp!(bin_path, dst_path)
+
+    :ok
+  end
+
   # Available targets: https://github.com/evanw/esbuild/tree/main/npm/@esbuild
   def target() do
     # Get erlang's interpretation of what the system architecture is
@@ -26,9 +106,7 @@ defmodule Dantzig.HiGHSDownloader do
     end
   end
 
-  defp tar_gz_url(target) do
-    highs_version = Config.get_highs_version()
-
+  defp tar_gz_url(highs_version, target) do
     "https://github.com/JuliaBinaryWrappers/" <>
     "HiGHSstatic_jll.jl/releases/download/" <>
     "HiGHSstatic-v#{highs_version}%2B0/" <>
@@ -107,57 +185,5 @@ defmodule Dantzig.HiGHSDownloader do
     else
       _ -> nil
     end
-  end
-
-  def maybe_download_for_target() do
-    case File.exists?(Config.get_highs_binary_path()) do
-      true ->
-        :ok
-
-      false ->
-        download_for_target(target())
-    end
-  end
-
-  def download_for_target(target) do
-    url = tar_gz_url(target)
-
-    Logger.debug("Downloading HiGHS solver from #{url}")
-
-    tar_archive = fetch_file!(url)
-
-    random_suffix = 1..100_000_000 |> Enum.random() |> to_string()
-    unpack_dir = "unpacked_#{random_suffix}"
-    tmp_dir = System.tmp_dir!() |> Path.join(unpack_dir)
-
-    unpacked =
-      :erl_tar.extract({:binary, tar_archive}, [
-        :compressed,
-        files: ['bin/highs'],
-        cwd: to_charlist(tmp_dir)
-      ])
-
-    case unpacked do
-      :ok -> :ok
-      {:error, :eof} ->
-        # Even if `:erl_tar.extract/2` return this error,
-        # it seems like it unpacks the file correctly
-        :ok
-      other -> raise "couldn't unpack archive: #{inspect(other)}"
-    end
-
-    bin_path = Path.join([tmp_dir, "bin", "highs"])
-
-    dst_path = Config.default_highs_binary_path()
-
-    # Create the destination directory if
-    # it does not exist
-    dst_path
-    |> Path.dirname()
-    |> File.mkdir_p!()
-
-    File.cp!(bin_path, dst_path)
-
-    :ok
   end
 end
