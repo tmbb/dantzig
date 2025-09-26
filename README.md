@@ -1,141 +1,188 @@
 # Dantzig
 
-Opimitizion library for elixir, using the HiGHS solver.
-Supports linear programming (LP), mixed linear integer programming (MILP) and quadratic programming (QP).
+[![Hex.pm](https://img.shields.io/hexpm/v/dantzig.svg)](https://hex.pm/packages/dantzig)
+[![Hex.pm](https://img.shields.io/hexpm/dt/dantzig.svg)](https://hex.pm/packages/dantzig)
+[![Build Status](https://github.com/tmbb/dantzig/workflows/CI/badge.svg)](https://github.com/tmbb/dantzig/actions)
 
-## Installation
+**Linear and Mixed-Integer Programming for Elixir** with a clean modeling DSL, AST-powered transformations, and the HiGHS solver.
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `dantzig` to your list of dependencies in `mix.exs`:
+## 🚀 Features
+
+- **Multiple Modeling Styles**: From explicit variable creation to pattern-based N-dimensional modeling
+- **Automatic Linearization**: Transform non-linear expressions (`abs`, `max/min`, logical operations) into linear constraints
+- **Pattern-based Modeling**: Create N-dimensional variables with generators: `x[i, j]` for `i <- 1..8, j <- 1..8`
+- **Symbolic Algebra**: Operator overloading for polynomials with automatic simplification
+- **HiGHS Integration**: Automatic binary download and seamless solver integration
+- **Comprehensive Documentation**: ExDoc-powered docs with tutorials and examples
+
+## 📦 Installation
+
+Add `dantzig` to your dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:dantzig, "~> 0.1.0"}
+    {:dantzig, "~> 0.2.0"}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/dantzig>.
+## ⚡ Quick Start
 
-## Example
-
-Example taken from the tests
+### Simple Linear Programming
 
 ```elixir
-  test "more complex layout problem" do
-    require Dantzig.Problem, as: Problem
-    alias Dantzig.Solution
-    use Dantzig.Polynomial.Operators
+alias Dantzig.{Problem, Constraint}
+use Dantzig.Polynomial.Operators
 
-    total_width = 300.0
+problem = Problem.new(direction: :maximize)
+{problem, x} = Problem.new_variable(problem, "x", min: 0)
+{problem, y} = Problem.new_variable(problem, "y", min: 0)
 
-    problem = Problem.new(direction: :maximize)
+problem =
+  problem
+  |> Problem.add_constraint(Constraint.new_linear(x + 2*y, :<=, 14))
+  |> Problem.add_constraint(Constraint.new_linear(3*x - y, :<=, 0))
+  |> Problem.maximize(3*x + 4*y)
 
-    # Define a custom utility function to specify declaratively
-    # that one element fits inside another.
-    fits_inside = fn problem, inside, outside ->
-      Problem.add_constraint(problem, Constraint.new(inside <= outside))
-    end
-
-    # Suppose we need to have the sizes of our boxes calculated
-    # by a call to an external program which returns the sizes
-    # all at once.
-    long_calculation_by_external_program = fn _boxes ->
-      [15, 40, 38.0]
-    end
-
-    # Use the implicit style of description.
-    # This macro will perform some simple AST rewriting to allow us
-    # to use something like a "monadic" style from Haskell.
-    Problem.with_implicit_problem problem do
-      # The v!() is special syntax which creates variables
-      # in implicit problems. Each of the lines below is rewritten as
-      # `{problem, variable} = Problem.new_variable(problem, variable, optional_args)`
-
-      # Margins for our drawing
-      v!(left_margin, min: 0.0)
-      v!(center, min: 0.0)
-      v!(right_margin, min: 0.0)
-
-      # Widths of some boxes we want to draw
-      v!(box1_width, min: 0.0)
-      v!(box2_width, min: 0.0)
-      v!(box3_width, min: 0.0)
-
-      # Canvases which will fit inside the center,
-      # with specific constraints
-      v!(canvas1_width, min: 0.0)
-      v!(canvas2_width, min: 0.0)
-      v!(canvas3_width, min: 0.0)
-
-      # constraint!() is special syntax to add a constraint to the problem
-      constraint!(canvas1_width + canvas2_width + canvas3_width == center)
-      constraint!(canvas1_width == 2*canvas2_width)
-      constraint!(canvas1_width == 2*canvas3_width)
-
-      # Now it's better to use the `problem` variable
-      problem =
-        problem
-        |> fits_inside.(box1_width, left_margin)
-        |> fits_inside.(box2_width, left_margin)
-        # The last box must fit in the right margin
-        |> fits_inside.(box3_width, right_margin)
-
-      # Get the box widths from our "slow call to an external program"
-      # We get the widths all at once and only once the all the variables
-      # are defined so that we can ask for all widths in a single call.
-      [box1_w, box2_w, box3_w] = long_calculation_by_external_program.([
-        box1_width,
-        box2_width,
-        box3_width
-      ])
-
-      constraint!(box1_width == box1_w)
-      constraint!(box2_width == box2_w)
-      constraint!(box3_width == box3_w)
-
-      # All the margins must add to the given total length
-      # NOTE: total_width is not a variable! It's a constant we've defined before
-      # The custom operators from the `Dantzig.Polynomial.Operators` module handle
-      # both numbers and polynomials
-      constraint!(left_margin + center + right_margin == total_width)
-
-      # Minimize the margins and maximize the center
-      increment_objective!(center - left_margin - right_margin)
-    end
-
-    solution = Dantzig.solve(problem)
-
-    # Test properties of the solution
-    assert solution.model_status == "Optimal"
-    assert solution.feasibility == "Feasible"
-    # One constraint and three variables
-    assert Solution.nr_of_constraints(solution) == 10
-    assert Solution.nr_of_variables(solution) == 9
-    # The solution gets the right values
-    # (note: in this case, equalities should be exact)
-    assert Solution.evaluate(solution, left_margin) == 40.0
-    assert Solution.evaluate(solution, center) == 222.0
-    assert Solution.evaluate(solution, right_margin) == 38.0
-
-    assert Solution.evaluate(solution, box1_width) == 15.0
-    assert Solution.evaluate(solution, box2_width) == 40.0
-    assert Solution.evaluate(solution, box3_width) == 38.0
-    # The canvases widths sum to the center width and respect
-    # the poportions we've picked (or any other proportion,
-    # as long as the constraints are linear)
-    assert Solution.evaluate(solution, canvas1_width) == 111.0
-    assert Solution.evaluate(solution, canvas2_width) == 55.5
-    assert Solution.evaluate(solution, canvas3_width) == 55.5
-    # The objective has the right value
-    assert solution.objective == 144.0
-  end
+{:ok, solution} = Dantzig.solve(problem)
+IO.inspect({solution.objective, solution.variables})
 ```
 
+### Pattern-based N-Queens
 
-## Documentation
+```elixir
+require Dantzig.DSL, as: DSL
 
-TODO
+problem = Problem.new(direction: :minimize)
+
+# Create 8x8 binary variables: x[i,j] = 1 if queen at position (i,j)
+problem = DSL.add_variables(problem, [i <- 1..8, j <- 1..8], "x", :binary)
+
+# One queen per row
+problem = DSL.add_constraints(problem, [i <- 1..8], "x", {i, :_}, :==, 1)
+
+# One queen per column
+problem = DSL.add_constraints(problem, [j <- 1..8], "x", {:_, j}, :==, 1)
+
+solution = Dantzig.solve!(problem)
+```
+
+### Non-linear with Automatic Linearization
+
+```elixir
+# abs(x) and max(x, y, z) automatically become linear constraints
+problem = Problem.new(direction: :minimize)
+{problem, x} = Problem.new_variable(problem, "x", min: -10, max: 10)
+{problem, y} = Problem.new_variable(problem, "y", min: -10, max: 10)
+
+# These non-linear expressions are automatically linearized
+problem = Problem.add_constraint(problem, Constraint.new(abs(x) + max(x, y) <= 5))
+```
+
+## 🎯 Modeling Styles
+
+Dantzig supports multiple modeling approaches:
+
+### 1. **Explicit Modeling**
+
+Direct manipulation with full control:
+
+```elixir
+{problem, x} = Problem.new_variable(problem, "x", min: 0, max: 10)
+problem = Problem.add_constraint(problem, Constraint.new(x <= 5))
+```
+
+### 2. **Pattern-based Modeling (DSL)**
+
+High-level macros for N-dimensional problems:
+
+```elixir
+problem = DSL.add_variables(problem, [i <- 1..n, j <- 1..m], "x", :binary)
+problem = DSL.add_constraints(problem, [i <- 1..n], "x", {i, :_}, :==, 1)
+```
+
+### 3. **Implicit Modeling**
+
+Monadic-style syntax:
+
+```elixir
+Problem.with_implicit_problem problem do
+  v!(x, min: 0.0, max: 10.0)
+  constraint!(x <= 5)
+  increment_objective!(x)
+end
+```
+
+### 4. **AST-based Modeling**
+
+Non-linear expressions with automatic linearization:
+
+```elixir
+# abs(x), max(x, y), and(x, y, z) automatically become linear
+```
+
+## 📚 Documentation
+
+- **[Getting Started](docs/GETTING_STARTED.md)** - Your first optimization problem
+- **[Tutorial](docs/TUTORIAL.md)** - Comprehensive guide with N-Queens example
+- **[Modeling Guide](docs/MODELING_GUIDE.md)** - Best practices and advanced techniques
+- **[Pattern-based Operations](docs/PATTERN_BASED_OPERATIONS.md)** - N-dimensional modeling patterns
+- **[Variadic Operations](docs/VARIADIC_OPERATIONS.md)** - Advanced pattern matching
+- **[Macros Guide](docs/README_MACROS.md)** - Macro-based modeling techniques
+- **[Advanced AST](docs/ADVANCED_AST.md)** - Automatic linearization and AST transformations
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and implementation details
+
+Generate full documentation:
+
+```bash
+mix docs
+```
+
+## 🔧 Configuration
+
+Dantzig automatically downloads the HiGHS binary for your platform. Customize:
+
+```elixir
+# Custom HiGHS binary path
+config :dantzig, :highs_binary_path, "/usr/local/bin/highs"
+
+# HiGHS version (default: "1.9.0")
+config :dantzig, :highs_version, "1.9.0"
+```
+
+## 🎨 Examples
+
+Check out the `examples/` directory for runnable examples:
+
+- `simple_working_example.exs` - Basic pattern-based modeling
+- `pattern_based_operations_example.exs` - N-dimensional modeling
+- `variadic_operations_example.exs` - Advanced pattern matching
+
+Run any example with: `mix run examples/filename.exs`
+
+**Note**: Examples must be run with `mix run` (not `elixir`) to access the Dantzig modules.
+
+## 🚧 Current Limitations
+
+- **Mixed-integer**: Variable types are tracked but not yet serialized to LP format
+- **Degree limits**: Only linear and quadratic expressions (degree ≤ 2)
+- **Operators**: Supports `:==`, `:<=`, `:>=` (reserved `:in` for future)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see our [contributing guidelines](CONTRIBUTING.md) and check out the [architecture documentation](docs/ARCHITECTURE.md) to understand the system design.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE.TXT](LICENSE.TXT) file for details.
+
+## 🙏 Acknowledgments
+
+- [HiGHS](https://github.com/ERGO-Code/HiGHS) - High-performance optimization solver
+- [JuliaBinaryWrappers](https://github.com/JuliaBinaryWrappers) - Pre-compiled HiGHS binaries
+- The Elixir community for inspiration and feedback
+
+---
+
+**Ready to optimize?** Start with the [Getting Started Guide](docs/GETTING_STARTED.md) or dive into the [Tutorial](docs/TUTORIAL.md)!

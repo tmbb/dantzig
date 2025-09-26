@@ -3,7 +3,6 @@ defmodule Dantzig.ParserTest do
 
   alias Dantzig.Solution
 
-
   test "parses solution correctly" do
     # Historical note: at one point in time, this test was mysteriously
     # failing because of a bug in `Solution.from_file_contents!/1`

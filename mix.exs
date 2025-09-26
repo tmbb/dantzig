@@ -16,9 +16,48 @@ defmodule Dantzig.MixProject do
       ],
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
-      name: "Danztig",
-      description: "Linear progamming solver for elixir",
-      source_url: "https://github.com/tmbb/dantzig"
+      name: "Dantzig",
+      description: "Linear programming solver for Elixir",
+      source_url: "https://github.com/tmbb/dantzig",
+      docs: [
+        main: "readme",
+        extras: [
+          "README.md",
+          "docs/GETTING_STARTED.md",
+          "docs/TUTORIAL.md",
+          "docs/MODELING_GUIDE.md",
+          "docs/ADVANCED_AST.md",
+          "docs/ARCHITECTURE.md",
+          "docs/PATTERN_BASED_OPERATIONS.md",
+          "docs/README_MACROS.md",
+          "docs/VARIADIC_OPERATIONS.md"
+        ],
+        groups_for_modules: [
+          Core: [
+            Dantzig,
+            Dantzig.Problem,
+            Dantzig.ProblemVariable,
+            Dantzig.Constraint,
+            Dantzig.SolvedConstraint,
+            Dantzig.Polynomial,
+            Dantzig.Polynomial.Operators,
+            Dantzig.Solution
+          ],
+          "AST & Macros": [
+            Dantzig.AST,
+            Dantzig.AST.Parser,
+            Dantzig.AST.Analyzer,
+            Dantzig.AST.Transformer,
+            Dantzig.DSL
+          ],
+          Solver: [
+            Dantzig.HiGHS,
+            Dantzig.HiGHSDownloader,
+            Dantzig.Config,
+            Dantzig.Solution.Parser
+          ]
+        ]
+      ]
     ]
   end
 
@@ -26,7 +65,7 @@ defmodule Dantzig.MixProject do
     Dantzig.HiGHSDownloader.maybe_download_for_target()
   end
 
-  def elixirc_paths(env) when env in [:dev, :test], do: ["lib", "test/support"]
+  def elixirc_paths(env) when env in [:dev, :test], do: ["lib", "test"]
   def elixirc_paths(:prod), do: ["lib"]
 
   # Run "mix help compile.app" to learn about applications.
@@ -46,7 +85,7 @@ defmodule Dantzig.MixProject do
   defp deps do
     [
       {:nimble_parsec, "~> 1.4"},
-      {:ex_doc, "~> 0.36", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.38", only: :dev, runtime: false, warn_if_outdated: true},
       {:stream_data, "~> 1.1", only: [:test, :dev]}
     ]
   end

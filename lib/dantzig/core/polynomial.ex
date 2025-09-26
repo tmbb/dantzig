@@ -1,4 +1,14 @@
 defmodule Dantzig.Polynomial do
+  @moduledoc """
+  Sparse symbolic polynomials with operator overloading.
+
+  Internally represented as a map `%{[var, var, ...] => coefficient}` where the
+  key is the sorted multiset of variables comprising a term. Supports algebraic
+  operations, substitution, evaluation, and serialization to LP/QP iodata.
+
+  Degree is defined as the size of the term key; only degree ≤ 2 is supported
+  when serializing to LP/QP for HiGHS.
+  """
   defstruct simplified: %{}
 
   @type t :: %__MODULE__{}
@@ -95,7 +105,7 @@ defmodule Dantzig.Polynomial do
   @doc false
   def to_lp_iodata_objective(p) do
     # Raise an error if the polynomial is cubic or higher
-    unless degree(p) in [0, 1, 2] do
+    if degree(p) not in [0, 1, 2] do
       raise RuntimeError, """
       Polynomials of degree > 2 are not supported by the LP solver.
           Please try to convert your constraints and objective function \
@@ -137,7 +147,7 @@ defmodule Dantzig.Polynomial do
 
   def to_lp_constraint(p) do
     # Raise an error if the polynomial is cubic or higher
-    unless degree(p) in [0, 1, 2] do
+    if degree(p) not in [0, 1, 2] do
       raise RuntimeError, """
       Polynomials of degree < 2 are not supported by the LP solver.
           Please try to convert your constraints and objective function \

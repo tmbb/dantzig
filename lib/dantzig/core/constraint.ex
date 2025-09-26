@@ -1,6 +1,14 @@
 defmodule Dantzig.Constraint do
   @moduledoc """
-  TODO
+  Normalized constraints over polynomials.
+
+  Build with `new/3` or `new_linear/3`, or use the macros with comparison
+  expressions: `new x + y <= 10`.
+
+  Constraints are normalized by moving all terms to the left-hand side and
+  storing a numeric right-hand side.
+
+  Supported operators: `:==`, `:<=`, `:>=`. The `:in` operator is reserved.
   """
 
   require Dantzig.Polynomial, as: Polynomial
@@ -108,7 +116,7 @@ defmodule Dantzig.Constraint do
   end
 
   defp validate_linear_constraint!(_left, _right, difference) do
-    unless Polynomial.degree(difference) < 2 do
+    if not (Polynomial.degree(difference) < 2) do
       raise RuntimeError, """
       Error when adding constraint to Linear Problem. Constraint is not linear.
       """
@@ -123,8 +131,8 @@ defmodule Dantzig.Constraint do
 
       other ->
         raise ArgumentError, """
-          Invalid expression in constraint: #{Macro.to_string(other)}.
-          """
+        Invalid expression in constraint: #{Macro.to_string(other)}.
+        """
     end
   end
 
@@ -143,13 +151,13 @@ defmodule Dantzig.Constraint do
   """
   @spec solve_for_variable(t(), ProblemVariable.variable_name()) :: SolvedConstraint.t()
   def solve_for_variable(%__MODULE__{} = constraint, variable) do
-    unless depends_on?(constraint, variable) do
+    if !depends_on?(constraint, variable) do
       raise ArgumentError, """
-        The constraint doesn't depend on the variable #{inspect(variable)}
-        Constraint:
+      The constraint doesn't depend on the variable #{inspect(variable)}
+      Constraint:
 
-        #{inspect(constraint)}
-        """
+      #{inspect(constraint)}
+      """
     end
 
     # Ensure we are using a canonical representation
