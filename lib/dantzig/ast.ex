@@ -31,6 +31,18 @@ defmodule Dantzig.AST do
   end
 
   @doc """
+  Represents a generator-based sum operation: sum(expr for i <- list, j <- list)
+  """
+  defmodule GeneratorSum do
+    defstruct [:expression, :generators]
+
+    @type t :: %__MODULE__{
+            expression: t(),
+            generators: [tuple()]
+          }
+  end
+
+  @doc """
   Represents an absolute value operation: abs(x[i, j])
   """
   defmodule Abs do
@@ -144,6 +156,7 @@ defmodule Dantzig.AST do
   @type t ::
           Variable.t()
           | Sum.t()
+          | GeneratorSum.t()
           | Abs.t()
           | Max.t()
           | Min.t()

@@ -5,6 +5,7 @@ defmodule Dantzig.AST.Parser do
   Handles parsing of:
   - Variable expressions: x[i, j], x[_, j]
   - Sum expressions: sum(x[i, _])
+  - Generator-based sum expressions: sum(expr for i <- list, j <- list)
   - Constraint expressions: sum(x[i, _]) == 1
   - Binary operations: x + y, x * 2
   - Non-linear functions: abs(x), max(x, y), min(x, y)
@@ -53,7 +54,14 @@ defmodule Dantzig.AST.Parser do
   """
   def parse_expression(ast) do
     case ast do
-      # sum(x[i, _])
+      # sum(expr, :for, generators) - generator-based sum
+      {:sum, _, [expr, :for, generators]} ->
+        %AST.GeneratorSum{
+          expression: parse_expression(expr),
+          generators: parse_generators_for_sum(generators)
+        }
+
+      # sum(x[i, _]) - pattern-based sum
       {:sum, _, [var_expr]} ->
         %AST.Sum{variable: parse_variable_expression(var_expr)}
 
@@ -176,6 +184,40 @@ defmodule Dantzig.AST.Parser do
       _ ->
         raise ArgumentError, "Invalid generator: #{inspect(generators)}"
     end)
+  end
+
+  @doc """
+  Parse generators for sum expressions: i <- 1..8, j <- 1..8
+  """
+  def parse_generators_for_sum(generators) do
+    case generators do
+      # Single generator: i <- 1..3
+      {:<-, _, [var, range]} when is_struct(range, Range) ->
+        [{var, Enum.to_list(range)}]
+
+      # Single generator with list: i <- [1, 2, 3]
+      {:<-, _, [var, list]} when is_list(list) ->
+        [{var, list}]
+
+      # Multiple generators: [i <- 1..2, j <- 1..2]
+      list when is_list(list) ->
+        Enum.map(list, fn
+          {:<-, _, [var, range]} when is_struct(range, Range) ->
+            {var, Enum.to_list(range)}
+
+          {:<-, _, [var, list]} when is_list(list) ->
+            {var, list}
+
+          {:<-, _, [var, expr]} ->
+            {var, evaluate_expression(expr)}
+
+          _ ->
+            raise ArgumentError, "Invalid generator in sum: #{inspect(list)}"
+        end)
+
+      _ ->
+        raise ArgumentError, "Invalid generators in sum: #{inspect(generators)}"
+    end
   end
 
   @doc """

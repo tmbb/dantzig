@@ -80,9 +80,16 @@ defmodule Dantzig.HiGHS do
   end
 
   defp constraint_to_iodata(constraint = %Constraint{}) do
+    # Polynomial.to_lp_constraint returns [linear_terms, quadratic_terms]
+    # We need to flatten this into a single iodata
+    [linear_terms, quadratic_terms] = Polynomial.to_lp_constraint(constraint.left_hand_side)
+
+    # Flatten the iodata to ensure proper string conversion
+    polynomial_iodata = [linear_terms, quadratic_terms]
+
     base = [
       "  ",
-      Polynomial.to_lp_constraint(constraint.left_hand_side),
+      polynomial_iodata,
       " ",
       operator_to_iodata(constraint.operator),
       " ",
@@ -98,15 +105,18 @@ defmodule Dantzig.HiGHS do
         base
 
       name ->
+        sanitized_name = sanitize_name(name)
+
         [
           "  ",
-          name,
+          sanitized_name,
           ": ",
-          Enum.at(base, 2),
-          Enum.at(base, 3),
-          Enum.at(base, 4),
-          Enum.at(base, 5),
-          Enum.at(base, 6)
+          polynomial_iodata,
+          " ",
+          operator_to_iodata(constraint.operator),
+          " ",
+          to_string(constraint.right_hand_side),
+          "\n"
         ]
     end
   end
@@ -115,6 +125,26 @@ defmodule Dantzig.HiGHS do
     case operator do
       :== -> "="
       other -> to_string(other)
+    end
+  end
+
+  # Sanitize row/constraint names for LP format
+  defp sanitize_name(name) when is_binary(name) do
+    sanitized =
+      name
+      |> String.replace(~r/[^A-Za-z0-9_\.]+/, "_")
+      |> String.trim("_")
+
+    case sanitized do
+      <<first::binary-size(1), _rest::binary>> ->
+        if first =~ ~r/[A-Za-z_]/ do
+          sanitized
+        else
+          "c_" <> sanitized
+        end
+
+      _ ->
+        "c_"
     end
   end
 
@@ -130,6 +160,7 @@ defmodule Dantzig.HiGHS do
       end)
 
     bounds = all_variable_bounds(Map.values(problem.variable_defs))
+    general_vars = all_general_variables(Map.values(problem.variable_defs))
 
     [
       direction_to_iodata(problem.direction),
@@ -141,36 +172,57 @@ defmodule Dantzig.HiGHS do
       "Bounds\n",
       bounds,
       "General\n",
+      general_vars,
       "End\n"
     ]
   end
 
   defp variable_bounds(%ProblemVariable{} = v) do
-    case {v.min, v.max} do
-      {nil, nil} ->
-        "  #{v.name} free\n"
+    # For binary variables, set bounds to 0 <= variable <= 1
+    case v.type do
+      :binary ->
+        "  0 <= #{v.name} <= 1\n"
 
-      {nil, max} ->
-        "  #{v.name} <= #{max}\n"
+      _ ->
+        case {v.min, v.max} do
+          {nil, nil} ->
+            "  #{v.name} free\n"
 
-      {min, nil} ->
-        min_str =
-          if is_struct(min, Polynomial), do: Polynomial.serialize(min), else: to_string(min)
+          {nil, max} ->
+            "  #{v.name} <= #{max}\n"
 
-        "  #{min_str} <= #{v.name}\n"
+          {min, nil} ->
+            min_str =
+              if is_struct(min, Polynomial), do: Polynomial.serialize(min), else: to_string(min)
 
-      {min, max} ->
-        min_str =
-          if is_struct(min, Polynomial), do: Polynomial.serialize(min), else: to_string(min)
+            "  #{min_str} <= #{v.name}\n"
 
-        max_str =
-          if is_struct(max, Polynomial), do: Polynomial.serialize(max), else: to_string(max)
+          {min, max} ->
+            min_str =
+              if is_struct(min, Polynomial), do: Polynomial.serialize(min), else: to_string(min)
 
-        "  #{min_str} <= #{v.name}\n  #{v.name} <= #{max_str}\n"
+            max_str =
+              if is_struct(max, Polynomial), do: Polynomial.serialize(max), else: to_string(max)
+
+            "  #{min_str} <= #{v.name}\n  #{v.name} <= #{max_str}\n"
+        end
     end
   end
 
   defp all_variable_bounds(variables) do
     Enum.map(variables, &variable_bounds/1)
+  end
+
+  defp all_general_variables(variables) do
+    general_vars =
+      variables
+      |> Enum.filter(fn v -> v.type == :binary or v.type == :integer end)
+      |> Enum.map(fn v -> "  #{v.name}\n" end)
+
+    if general_vars == [] do
+      ""
+    else
+      general_vars
+    end
   end
 end

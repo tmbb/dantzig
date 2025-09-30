@@ -4,6 +4,8 @@ defmodule Dantzig.AST.Transformer do
 
   This is the core module that handles the linearization of non-linear functions
   like abs(), max(), min(), etc. by creating auxiliary variables and constraints.
+
+  Supports generator-based sum expressions: sum(expr for i <- list, j <- list)
   """
 
   require Dantzig.Problem, as: Problem
@@ -30,6 +32,9 @@ defmodule Dantzig.AST.Transformer do
 
       %AST.Sum{variable: var} ->
         transform_sum(var, problem, bindings)
+
+      %AST.GeneratorSum{expression: expr, generators: generators} ->
+        transform_generator_sum(expr, generators, problem, bindings)
 
       %AST.BinaryOp{left: left, operator: op, right: right} ->
         transform_binary_op(left, op, right, problem, bindings)
@@ -297,6 +302,117 @@ defmodule Dantzig.AST.Transformer do
     else
       raise ArgumentError, "Variable map not found for: #{var.name}"
     end
+  end
+
+  @doc """
+  Transform generator-based sum operation: sum(expr for i <- list, j <- list)
+  """
+  def transform_generator_sum(expr, generators, problem, bindings) do
+    # Parse generators to get variable names and their ranges
+    parsed_generators = parse_generators_for_sum(generators)
+
+    # Generate all combinations of generator values
+    combinations = generate_combinations(parsed_generators)
+
+    # For each combination, evaluate the expression and sum the results
+    {problem, sum_poly} =
+      Enum.reduce(combinations, {problem, Polynomial.const(0)}, fn combination,
+                                                                   {current_problem, acc} ->
+        # Create bindings for this combination
+        combination_bindings =
+          create_combination_bindings(parsed_generators, combination, bindings)
+
+        # Evaluate the expression with the new bindings
+        {new_problem, expr_poly} =
+          transform_expression(expr, current_problem, combination_bindings)
+
+        # Add to the running sum
+        new_sum = Polynomial.add(acc, expr_poly)
+
+        {new_problem, new_sum}
+      end)
+
+    {problem, sum_poly}
+  end
+
+  # Helper functions for generator-based sum
+
+  defp parse_generators_for_sum(generators) do
+    Enum.map(generators, fn
+      {:<-, _, [var, range]} when is_struct(range, Range) ->
+        {var, Enum.to_list(range)}
+
+      {:<-, _, [var, list]} when is_list(list) ->
+        {var, list}
+
+      {:<-, _, [var, expr]} ->
+        # Handle computed expressions
+        {var, evaluate_expression_for_sum(expr)}
+
+      _ ->
+        raise ArgumentError, "Invalid generator: #{inspect(generators)}"
+    end)
+  end
+
+  defp evaluate_expression_for_sum(expr) do
+    case expr do
+      # Range
+      range when is_struct(range, Range) ->
+        Enum.to_list(range)
+
+      # List
+      list when is_list(list) ->
+        list
+
+      # Literal
+      literal when is_number(literal) or is_atom(literal) ->
+        literal
+
+      # Binary operations
+      {op, _, [left, right]} when op in [:+, :-, :*, :/] ->
+        left_val = evaluate_expression_for_sum(left)
+        right_val = evaluate_expression_for_sum(right)
+
+        case op do
+          :+ -> left_val + right_val
+          :- -> left_val - right_val
+          :* -> left_val * right_val
+          :/ -> left_val / right_val
+        end
+
+      _ ->
+        raise ArgumentError, "Cannot evaluate expression: #{inspect(expr)}"
+    end
+  end
+
+  defp generate_combinations(parsed_generators) do
+    # Extract value lists from generators
+    {_var_names, value_lists} = Enum.unzip(parsed_generators)
+
+    # Generate cartesian product
+    generate_cartesian_product(value_lists)
+  end
+
+  defp generate_cartesian_product([]), do: [[]]
+
+  defp generate_cartesian_product([values | rest]) do
+    for value <- values,
+        combination <- generate_cartesian_product(rest) do
+      [value | combination]
+    end
+  end
+
+  defp create_combination_bindings(parsed_generators, combination, original_bindings) do
+    # Create a map of variable names to their values for this combination
+    {var_names, _value_lists} = Enum.unzip(parsed_generators)
+
+    new_bindings =
+      Enum.zip(var_names, combination)
+      |> Enum.reduce(original_bindings, fn {var_name, value}, acc ->
+        Map.put(acc, var_name, value)
+      end)
+
+    new_bindings
   end
 
   @doc """

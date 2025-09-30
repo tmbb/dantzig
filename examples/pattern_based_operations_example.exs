@@ -1,8 +1,7 @@
 # Pattern-Based Operations Example
-# Demonstrates the new pattern-based syntax: max(x[_]), min(x[_]), etc.
+# Demonstrates the modern pattern-based syntax: max(x[_]), min(x[_]), etc.
 
 require Dantzig.Problem, as: Problem
-require Dantzig.DSL, as: Macros
 
 IO.puts("=== PATTERN-BASED OPERATIONS DEMONSTRATION ===")
 IO.puts("This example shows the new pattern-based syntax for variadic operations")
@@ -19,8 +18,9 @@ IO.puts("")
 
 # Create variables
 problem = Problem.new(direction: :minimize)
-generators = [{:i, :in, [1, 2, 3, 4, 5]}]
-problem = Macros.add_variables(problem, generators, "x", :continuous, "Continuous variables")
+
+problem =
+  Problem.variables(problem, "x", [i <- 1..5], :continuous, description: "Continuous variables")
 
 # Get the variable map to show what variables were created
 var_map = Problem.get_variables_nd(problem, "x")
@@ -49,10 +49,10 @@ IO.puts("You can write: min(y[_])")
 IO.puts("")
 
 # Create more variables
-generators2 = [{:i, :in, [1, 2, 3]}]
-
 problem =
-  Macros.add_variables(problem, generators2, "y", :continuous, "More continuous variables")
+  Problem.variables(problem, "y", [i <- 1..3], :continuous,
+    description: "More continuous variables"
+  )
 
 var_map2 = Problem.get_variables_nd(problem, "y")
 IO.puts("✓ Created #{map_size(var_map2)} continuous variables:")
@@ -80,8 +80,10 @@ IO.puts("  - max(x[_, _]) - maximum over all variables")
 IO.puts("")
 
 # Create 2D variables
-generators3 = [{:i, :in, [1, 2, 3]}, {:j, :in, [1, 2]}]
-problem = Macros.add_variables(problem, generators3, "z", :continuous, "2D continuous variables")
+problem =
+  Problem.variables(problem, "z", [i <- 1..3, j <- 1..2], :continuous,
+    description: "2D continuous variables"
+  )
 
 var_map3 = Problem.get_variables_nd(problem, "z")
 IO.puts("✓ Created #{map_size(var_map3)} 2D continuous variables:")
@@ -108,8 +110,7 @@ IO.puts("  - b[1] OR b[2] OR b[3] → b[_] OR b[_] OR b[_]")
 IO.puts("")
 
 # Create binary variables
-generators4 = [{:i, :in, [1, 2, 3, 4]}]
-problem = Macros.add_variables(problem, generators4, "a", :binary, "Binary variables")
+problem = Problem.variables(problem, "a", [i <- 1..4], :binary, description: "Binary variables")
 
 var_map4 = Problem.get_variables_nd(problem, "a")
 IO.puts("✓ Created #{map_size(var_map4)} binary variables:")
@@ -260,14 +261,7 @@ IO.puts("  - max(busy[_, _, _, _])   # max across all 4D entries")
 IO.puts("")
 
 # Create 4D variables busy[i, j, k, l]
-generators5 = [
-  {:i, :in, [1, 2]},
-  {:j, :in, [1, 2]},
-  {:k, :in, [1, 2]},
-  {:l, :in, [1, 2]}
-]
-
-problem = Macros.add_variables(problem, generators5, "busy", :continuous, "4D busy variables")
+problem = Problem.variables(problem, "busy", [i <- 1..2, j <- 1..2, k <- 1..2, l <- 1..2], :continuous, description: "4D busy variables")
 
 var_map5 = Problem.get_variables_nd(problem, "busy")
 IO.puts("✓ Created #{map_size(var_map5)} 4D continuous variables:")

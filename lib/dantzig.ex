@@ -19,15 +19,23 @@ defmodule Dantzig do
   Writes a temporary LP/QP model, invokes the external `highs` binary, and
   parses the solver output.
   """
-  def solve(%Problem{} = problem) do
+  def solve(%Problem{} = problem, opts \\ []) do
+    print_optimizer_input = Keyword.get(opts, :print_optimizer_input, false)
+
+    if print_optimizer_input do
+      IO.puts("\n--- Optimizer input (LP) ---")
+      IO.binwrite(IO.iodata_to_binary(HiGHS.to_lp_iodata(problem)))
+      IO.puts("\n--- End optimizer input ---\n")
+    end
+
     HiGHS.solve(problem)
   end
 
   @doc """
   Bang variant of `solve/1`. Raises if HiGHS fails to produce a solution.
   """
-  def solve!(%Problem{} = problem) do
-    {:ok, solution} = HiGHS.solve(problem)
+  def solve!(%Problem{} = problem, opts \\ []) do
+    {:ok, solution} = solve(problem, opts)
     solution
   end
 

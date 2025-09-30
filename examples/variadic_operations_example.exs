@@ -2,7 +2,6 @@
 # Demonstrates the enhanced support for variadic operations: max(), min(), and(), or()
 
 require Dantzig.Problem, as: Problem
-require Dantzig.DSL, as: Macros
 
 IO.puts("=== VARIADIC OPERATIONS DEMONSTRATION ===")
 IO.puts("This example shows how max(), min(), and(), or() can take any number of arguments")
@@ -18,8 +17,9 @@ IO.puts("")
 
 # Create variables
 problem = Problem.new(direction: :minimize)
-generators = [{:i, :in, [1, 2, 3]}]
-problem = Macros.add_variables(problem, generators, "x", :continuous, "Continuous variables")
+
+problem =
+  Problem.variables(problem, "x", [i <- 1..3], :continuous, description: "Continuous variables")
 
 # Get the variable map to demonstrate the concept
 var_map = Problem.get_variables_nd(problem, "x")
@@ -58,8 +58,7 @@ IO.puts("")
 
 # Create binary variables for AND demonstration
 problem2 = Problem.new(direction: :minimize)
-generators2 = [{:i, :in, [1, 2, 3, 4]}]
-problem2 = Macros.add_variables(problem2, generators2, "b", :binary, "Binary variables")
+problem2 = Problem.variables(problem2, "b", [i <- 1..4], :binary, description: "Binary variables")
 
 var_map2 = Problem.get_variables_nd(problem2, "b")
 IO.puts("✓ Created #{map_size(var_map2)} binary variables")

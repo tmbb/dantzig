@@ -3,7 +3,8 @@ defmodule Dantzig.ProblemVariable do
   defstruct name: nil,
             min: nil,
             max: nil,
-            type: :real
+            type: :real,
+            description: nil
 
   @type variable_name :: binary()
 end
