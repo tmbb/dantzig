@@ -6,7 +6,7 @@
 
 **Linear and Mixed-Integer Programming for Elixir** with a clean modeling DSL, AST-powered transformations, and the HiGHS solver.
 
-## 🚀 Features
+## Features
 
 - **Multiple Modeling Styles**: From explicit variable creation to pattern-based N-dimensional modeling
 - **Automatic Linearization**: Transform non-linear expressions (`abs`, `max/min`, logical operations) into linear constraints
@@ -15,7 +15,7 @@
 - **HiGHS Integration**: Automatic binary download and seamless solver integration
 - **Comprehensive Documentation**: ExDoc-powered docs with tutorials and examples
 
-## 📦 Installation
+## Installation
 
 Add `dantzig` to your dependencies in `mix.exs`:
 
@@ -27,7 +27,7 @@ def deps do
 end
 ```
 
-## ⚡ Quick Start
+## Quick Start
 
 ### Simple Linear Programming
 
@@ -210,14 +210,14 @@ Check out the `examples/` directory for comprehensive runnable examples:
 - `pattern_based_operations_example.exs` - N-dimensional modeling
 - `variadic_operations_example.exs` - Advanced pattern matching
 
-### **Classical Optimization Problems** ⭐
+### Classical Optimization Problems
 
 - `knapsack_problem.exs` - 0-1 Knapsack with 5 items and capacity constraint
 - `assignment_problem.exs` - Worker-task assignment optimization (3×3 matrix)
 - `transportation_problem.exs` - Supply chain optimization (3 suppliers, 4 customers)
 - `production_planning.exs` - Multi-period production with inventory management
 - `blending_problem.exs` - Material blending with quality constraints
-- `school_timetabling.exs` - **Showcase Example**: Complex school scheduling
+- `school_timetabling.exs` - Complex school scheduling (demonstration example)
 
 ### **Advanced Examples**
 
@@ -228,11 +228,11 @@ Run any example with: `mix run examples/filename.exs`
 
 **Note**: Examples must be run with `mix run` (not `elixir`) to access the Dantzig modules.
 
-## 🎓 Showcase Example: School Timetabling
+## School Timetabling Example
 
-The **School Timetabling Problem** demonstrates Dantzig's capability for solving complex, real-world scheduling problems:
+The School Timetabling Problem demonstrates the DSL's capability for solving complex scheduling problems:
 
-### **Problem Complexity**
+### Problem Complexity
 
 - **5 teachers** with different subject qualifications
 - **3 subjects** (Math, Science, English)
@@ -240,7 +240,7 @@ The **School Timetabling Problem** demonstrates Dantzig's capability for solving
 - **3 rooms** with different capacities
 - **Complex constraints**: Teacher availability, room conflicts, subject requirements
 
-### **Example Solution**
+### Example Solution
 
 ![School Timetabling Solution](examples/school_timetable.svg)
 
@@ -268,31 +268,31 @@ Slot4:
   Room3: Teacher4 teaching English
 ```
 
-### **Key Achievements**
+### Implementation Details
 
-- ✅ **60 decision variables** (5×3×3×4 = 180 possible combinations)
-- ✅ **Complex multi-dimensional constraints** handled efficiently
-- ✅ **Real-world scheduling scenario** successfully optimized
-- ✅ **Teacher qualification constraints** properly enforced
-- ✅ **Room and time conflict prevention** working correctly
+- **60 decision variables** (5×3×3×4 = 180 possible combinations)
+- **Multi-dimensional constraints** handled efficiently
+- **Real-world scheduling scenario** successfully optimized
+- **Teacher qualification constraints** properly enforced
+- **Resource conflict prevention** working correctly
 
-This example showcases how Dantzig can handle **enterprise-scale optimization problems** with complex business rules and multi-dimensional constraints.
+This example demonstrates the DSL's capability for complex, multi-dimensional optimization problems.
 
-## 🚧 Current Limitations
+## Current Limitations
 
 - **Mixed-integer**: Variable types are tracked but not yet serialized to LP format
 - **Degree limits**: Only linear and quadratic expressions (degree ≤ 2)
 - **Operators**: Supports `:==`, `:<=`, `:>=` (reserved `:in` for future)
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see our [contributing guidelines](CONTRIBUTING.md) and check out the [architecture documentation](docs/ARCHITECTURE.md) to understand the system design.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE.TXT](LICENSE.TXT) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [HiGHS](https://github.com/ERGO-Code/HiGHS) - High-performance optimization solver
 - [JuliaBinaryWrappers](https://github.com/JuliaBinaryWrappers) - Pre-compiled HiGHS binaries
@@ -300,4 +300,6 @@ This project is licensed under the MIT License - see the [LICENSE.TXT](LICENSE.T
 
 ---
 
-**Ready to optimize?** Start with the [Getting Started Guide](docs/GETTING_STARTED.md) or dive into the [Tutorial](docs/TUTORIAL.md)!
+## Getting Started
+
+Begin with the [Getting Started Guide](docs/GETTING_STARTED.md) or explore the [Tutorial](docs/TUTORIAL.md) for detailed examples.
