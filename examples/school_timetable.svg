@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .header { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+      .cell { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #333; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="400.0" y="30" class="title">School Timetabling Solution</text>
+
+  <!-- Time slot headers -->
+  <text x="40" y="70" class="header">Time Slot</text>
+  <text x="240" y="70" class="header">Room 1</text>
+  <text x="440" y="70" class="header">Room 2</text>
+  <text x="640" y="70" class="header">Room 3</text>
+  <text x="40" y="130" class="header">Legend:</text>
+</svg>
