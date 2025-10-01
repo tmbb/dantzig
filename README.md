@@ -180,6 +180,7 @@ problem =
 - **[Macros Guide](docs/README_MACROS.md)** - Macro-based modeling techniques
 - **[Advanced AST](docs/ADVANCED_AST.md)** - Automatic linearization and AST transformations
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and implementation details
+- **[Project Planning](docs/planning/)** - Development plans and completion reports
 
 Generate full documentation:
 

@@ -54,6 +54,12 @@ problem =
       "Whether to select item"
     )
 
+    constraints(
+      [item <- item_names],
+      select(item) <= 1,
+      "Item selection constraint"
+    )
+
     # Constraint: total weight must not exceed capacity
     constraints(
       sum(for item <- item_names, do: select(item) * items_dict[item].weight) <= capacity,

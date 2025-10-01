@@ -1,15 +1,22 @@
-# Simple test for generator sum functionality
-require Dantzig.AST.Parser, as: Parser
+# Simple test for DSL functionality
+require Dantzig.Problem, as: Problem
 
-IO.puts("Testing generator sum parsing...")
+IO.puts("Testing DSL functionality...")
 
-# Test the new syntax: sum(expr, :for, generators)
+# Test basic problem creation
 try do
-  expr = quote do: sum(x(i), :for, i <- 1..3)
-  parsed = Parser.parse_expression(expr)
-  IO.puts("✅ Parsing successful: #{inspect(parsed)}")
+  problem =
+    Problem.define do
+      new(direction: :maximize)
+      variables("x", :continuous, min: 0)
+      constraints(x <= 10)
+      objective(x)
+    end
+
+  IO.puts("✅ Problem creation successful")
+  IO.puts("Variables: #{map_size(problem.variables)}")
+  IO.puts("Constraints: #{map_size(problem.constraints)}")
 rescue
   error ->
-    IO.puts("❌ Parsing failed: #{inspect(error)}")
-    IO.puts("Expression was: #{inspect(expr)}")
+    IO.puts("❌ Problem creation failed: #{inspect(error)}")
 end
