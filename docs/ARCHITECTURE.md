@@ -80,28 +80,28 @@ Dantzig is a modeling layer for optimization problems in Elixir with a bridge to
 
 ### Basic Flow (Explicit Modeling)
 
-1) Build `Dantzig.Problem` with variables, constraints, objective
-2) Serialize via `Dantzig.HiGHS.to_lp_iodata/1`
+1. Build `Dantzig.Problem` with variables, constraints, objective
+2. Serialize via `Dantzig.HiGHS.to_lp_iodata/1`
    - Objective: linear + `[ 2*quadratic_terms ] / 2`
    - Constraints: degree ≤ 2; cubic+ rejected
    - Bounds per variable; `General` section currently empty
-3) Execute `highs` on model, write solution
-4) Parse to `Dantzig.Solution`
-5) Evaluate expressions at the solution
+3. Execute `highs` on model, write solution
+4. Parse to `Dantzig.Solution`
+5. Evaluate expressions at the solution
 
 ### Advanced Flow (Pattern-based + AST)
 
-1) **Modeling**: Use DSL macros or AST expressions
+1. **Modeling**: Use DSL macros or AST expressions
    - `Dantzig.DSL.add_variables/5` creates N-dimensional variable families
    - `Dantzig.DSL.add_constraints/7` creates pattern-based constraints
    - AST expressions for non-linear operations (abs, max/min, logical)
-2) **Transformation**: AST → Linear constraints
+2. **Transformation**: AST → Linear constraints
    - `Dantzig.AST.Parser` converts Elixir AST to Dantzig AST
    - `Dantzig.AST.Transformer` linearizes non-linear expressions
    - Auxiliary variables and constraints added automatically
-3) **Serialization**: Same as basic flow
-4) **Solving**: Same as basic flow
-5) **Evaluation**: Solution values substituted back into original expressions
+3. **Serialization**: Same as basic flow
+4. **Solving**: Same as basic flow
+5. **Evaluation**: Solution values substituted back into original expressions
 
 ### Sequence diagram (Mermaid)
 
@@ -224,7 +224,23 @@ Non-linear expressions with automatic linearization:
 - **Pattern-based modeling**: efficient generation of N-dimensional variable families
 - **Memory usage**: sparse polynomial representation minimizes memory footprint
 
-### Potential improvements
+## Related Documentation
+
+- **[DSL Tutorial](COMPREHENSIVE_TUTORIAL.md)** - Complete usage guide with examples
+- **[Getting Started](GETTING_STARTED.md)** - Basic setup and first example
+- **[Pattern-based Operations](PATTERN_BASED_OPERATIONS.md)** - Advanced pattern features
+- **[Variadic Operations](VARIADIC_OPERATIONS.md)** - Variadic function support
+- **[Advanced AST](ADVANCED_AST.md)** - AST transformation details
+
+## Related Documentation
+
+- **[DSL Tutorial](COMPREHENSIVE_TUTORIAL.md)** - Complete usage guide with examples
+- **[Getting Started](GETTING_STARTED.md)** - Basic setup and first example
+- **[Pattern-based Operations](PATTERN_BASED_OPERATIONS.md)** - Advanced pattern features
+- **[Variadic Operations](VARIADIC_OPERATIONS.md)** - Variadic function support
+- **[Advanced AST](ADVANCED_AST.md)** - AST transformation details
+
+## Potential Improvements
 
 - **Streaming**: stream large models when writing LP to avoid building large iodata in memory
 - **Caching**: add caching of coefficient vectors if matrix form is introduced later

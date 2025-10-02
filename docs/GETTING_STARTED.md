@@ -34,8 +34,14 @@ P.algebra do
 end
 ```
 
-## Next steps
+## Next Steps
 
-- Read the Tutorial for pattern-based modeling
-- See Modeling Guide for best practices
-- Explore Advanced AST for automatic linearization
+- **[DSL Tutorial](COMPREHENSIVE_TUTORIAL.md)** - Complete guide with pattern-based modeling
+- **[Modeling Guide](MODELING_GUIDE.md)** - Best practices and patterns
+- **[Advanced AST](ADVANCED_AST.md)** - Automatic linearization details
+
+## Related Documentation
+
+- **[Architecture Guide](ARCHITECTURE.md)** - System design and internals
+- **[Pattern-based Operations](PATTERN_BASED_OPERATIONS.md)** - Advanced pattern features
+- **[Examples Directory](../examples/)** - Runnable examples for learning

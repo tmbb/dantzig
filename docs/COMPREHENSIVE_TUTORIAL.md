@@ -429,10 +429,18 @@ IO.puts("Feasibility: #{solution.feasibility}")
 ## 📞 Support and Resources
 
 - **Documentation**: Comprehensive guides in `docs/` directory
-- **Examples**: Runnable examples in `examples/` directory
+- **Examples**: Runnable examples in the `examples/` directory
 - **Tests**: Test suites demonstrating usage patterns
 - **Community**: GitHub issues and discussions
 
 ---
 
-**Ready to optimize?** Start with the [Getting Started Guide](docs/GETTING_STARTED.md) or explore the [Examples](examples/) directory!
+**Ready to optimize?** Start with the [Getting Started Guide](GETTING_STARTED.md) or explore the [Examples](../examples/) directory!
+
+## Related Documentation
+
+- **[Getting Started](GETTING_STARTED.md)** - Basic setup and first example
+- **[Architecture Guide](ARCHITECTURE.md)** - System design and internals
+- **[Pattern-based Operations](PATTERN_BASED_OPERATIONS.md)** - Advanced pattern features
+- **[Variadic Operations](VARIADIC_OPERATIONS.md)** - Variadic function support
+- **[Macro Guide](README_MACROS.md)** - Macro system documentation

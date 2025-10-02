@@ -4,20 +4,64 @@
 [![Hex.pm](https://img.shields.io/hexpm/dt/dantzig.svg)](https://hex.pm/packages/dantzig)
 [![Build Status](https://github.com/tmbb/dantzig/workflows/CI/badge.svg)](https://github.com/tmbb/dantzig/actions)
 
-**Linear and Mixed-Integer Programming for Elixir** with a clean modeling DSL, AST-powered transformations, and the HiGHS solver.
+**Mathematical Optimization for Elixir** — Write optimization problems naturally, like mathematical notation, with automatic linearization and powerful pattern-based modeling.
 
-## Features
+```elixir
+require Dantzig.Problem, as: Problem
 
-- **Multiple Modeling Styles**: From explicit variable creation to pattern-based N-dimensional modeling
-- **Automatic Linearization**: Transform non-linear expressions (`abs`, `max/min`, logical operations) into linear constraints
-- **Pattern-based Modeling**: Create N-dimensional variables with generators: `x[i, j]` for `i <- 1..8, j <- 1..8`
-- **Symbolic Algebra**: Operator overloading for polynomials with automatic simplification
-- **HiGHS Integration**: Automatic binary download and seamless solver integration
-- **Comprehensive Documentation**: ExDoc-powered docs with tutorials and examples
+# Pattern-based N-dimensional modeling
+problem =
+  Problem.define do
+    new(direction: :maximize)
 
-## Installation
+    # Create x[i,j] for i=1..8, j=1..8 — that's 64 variables in one line!
+    variables("x", [i <- 1..8, j <- 1..8], :binary, "Queen position")
 
-Add `dantzig` to your dependencies in `mix.exs`:
+    # One queen per row: sum over j for each i
+    constraints([i <- 1..8], sum(x(i, :_)) == 1, "One queen per row")
+
+    # One queen per column: sum over i for each j
+    constraints([j <- 1..8], sum(x(:_, j)) == 1, "One queen per column")
+
+    # Maximize queens placed (will be 8 for valid N-Queens solution)
+    objective(sum(x(:_, :_)), direction: :maximize)
+  end
+
+{:ok, solution} = Dantzig.solve(problem)
+```
+
+## ✨ What Makes Dantzig Special
+
+**Pattern-Based Modeling**: Create N-dimensional variables with intuitive generator syntax
+
+```elixir
+# Instead of manually creating x11, x12, x13, x21, x22, x23, ...
+variables("x", [i <- 1..3, j <- 1..3], :binary)
+
+# Use natural patterns: x(i, :_) sums over second dimension
+constraints([i <- 1..3], sum(x(i, :_)) == 1, "Row constraint")
+```
+
+**Automatic Linearization**: Non-linear expressions become linear constraints automatically
+
+```elixir
+# These work out of the box — no manual linearization needed!
+constraints(abs(x) + max(x, y, z) <= 5, "Non-linear with auto-linearization")
+constraints(a AND b AND c, "Logical AND constraint")
+```
+
+**Multiple Modeling Styles**: Choose the approach that fits your problem
+
+- **Simple syntax** for basic problems
+- **Pattern-based** for N-dimensional problems
+- **Explicit control** when you need it
+- **AST transformations** for advanced use cases
+
+## 🚀 Quick Start
+
+### Installation
+
+Add to your `mix.exs`:
 
 ```elixir
 def deps do
@@ -27,9 +71,7 @@ def deps do
 end
 ```
 
-## Quick Start
-
-### Simple Linear Programming
+### Your First Problem
 
 ```elixir
 require Dantzig.Problem, as: Problem
@@ -38,11 +80,11 @@ problem =
   Problem.define do
     new(direction: :maximize)
 
-    variables("x", :continuous, min: 0, description: "First variable")
-    variables("y", :continuous, min: 0, description: "Second variable")
+    variables("x", :continuous, min: 0, description: "Items to produce")
+    variables("y", :continuous, min: 0, description: "Items to sell")
 
-    constraints(x + 2*y <= 14, "First constraint")
-    constraints(3*x - y <= 0, "Second constraint")
+    constraints(x + 2*y <= 14, "Resource constraint")
+    constraints(3*x - y <= 0, "Quality constraint")
 
     objective(3*x + 4*y, direction: :maximize)
   end
@@ -51,255 +93,162 @@ problem =
 IO.inspect({solution.objective, solution.variables})
 ```
 
-### Pattern-based N-Queens
+## 📖 Documentation & Learning
 
-```elixir
-require Dantzig.Problem, as: Problem
+| Level               | Guide                                          | Description                     |
+| ------------------- | ---------------------------------------------- | ------------------------------- |
+| 🏃 **Beginner**     | [Getting Started](docs/GETTING_STARTED.md)     | Your first optimization problem |
+| 📚 **Intermediate** | [DSL Tutorial](docs/COMPREHENSIVE_TUTORIAL.md) | Complete guide with examples    |
+| 🏗️ **Advanced**     | [Architecture](docs/ARCHITECTURE.md)           | System design deep dive         |
+| 🔧 **Reference**    | [API Docs](https://hexdocs.pm/dantzig)         | Complete function reference     |
 
-problem =
-  Problem.define do
-    new(direction: :maximize)
-
-    # Create 8x8 binary variables: x[i,j] = 1 if queen at position (i,j)
-    variables("x", [i <- 1..8, j <- 1..8], :binary, "Queen position")
-
-    # One queen per row
-    constraints([i <- 1..8], sum(x(i, :_)) == 1, "One queen per row")
-
-    # One queen per column
-    constraints([j <- 1..8], sum(x(:_, j)) == 1, "One queen per column")
-
-    # Maximize number of queens (for 8x8 this will be 8)
-    objective(sum(x(:_, :_)), direction: :maximize)
-  end
-
-{:ok, solution} = Dantzig.solve(problem)
-```
-
-### Non-linear with Automatic Linearization
-
-```elixir
-require Dantzig.Problem, as: Problem
-
-problem =
-  Problem.define do
-    new(direction: :minimize)
-
-    variables("x", :continuous, min: -10, max: 10, description: "First variable")
-    variables("y", :continuous, min: -10, max: 10, description: "Second variable")
-
-    # These non-linear expressions are automatically linearized
-    constraints(abs(x) + max(x, y) <= 5, "Non-linear constraint with auto-linearization")
-  end
-```
-
-## 🎯 Modeling Styles
-
-Dantzig supports multiple modeling approaches:
-
-### 1. **Explicit Modeling**
-
-Direct manipulation with full control:
-
-```elixir
-alias Dantzig.{Problem, Constraint}
-use Dantzig.Polynomial.Operators
-
-problem = Problem.new(direction: :maximize)
-{problem, x} = Problem.new_variable(problem, "x", min: 0, max: 10)
-problem = Problem.add_constraint(problem, Constraint.new(x <= 5))
-```
-
-### 2. **Pattern-based Modeling (DSL)**
-
-High-level macros for N-dimensional problems:
-
-```elixir
-require Dantzig.Problem, as: Problem
-
-problem =
-  Problem.define do
-    new(direction: :maximize)
-
-    variables("x", [i <- 1..n, j <- 1..m], :binary, "Decision variable")
-
-    constraints([i <- 1..n], sum(x(i, :_)) == 1, "Row constraint")
-
-    objective(sum(x(:_, :_)), direction: :maximize)
-  end
-```
-
-### 3. **Simple Syntax**
-
-Intuitive mathematical syntax:
-
-```elixir
-require Dantzig.Problem, as: Problem
-
-problem =
-  Problem.define do
-    new(direction: :maximize)
-
-    variables("x", :continuous, min: 0, max: 10, description: "Variable")
-    variables("y", :continuous, min: 0, max: 15, description: "Variable")
-
-    constraints(x + 2*y <= 14, "Constraint 1")
-    constraints(3*x - y <= 0, "Constraint 2")
-
-    objective(3*x + 4*y, direction: :maximize)
-  end
-```
-
-### 4. **Advanced Features**
-
-Non-linear expressions with automatic linearization:
-
-```elixir
-require Dantzig.Problem, as: Problem
-
-problem =
-  Problem.define do
-    new(direction: :minimize)
-
-    variables("x", :continuous, min: -10, max: 10, description: "Variable with abs")
-    variables("y", :continuous, min: -10, max: 10, description: "Variable with max")
-    variables("z", :continuous, min: -10, max: 10, description: "Variable with max")
-
-    # These non-linear expressions are automatically linearized
-    constraints(abs(x) + max(x, y, z) <= 5, "Non-linear constraint")
-  end
-```
-
-## 📚 Documentation
-
-- **[Getting Started](docs/GETTING_STARTED.md)** - Your first optimization problem
-- **[Tutorial](docs/TUTORIAL.md)** - Comprehensive guide with N-Queens example
-- **[Modeling Guide](docs/MODELING_GUIDE.md)** - Best practices and advanced techniques
-- **[Pattern-based Operations](docs/PATTERN_BASED_OPERATIONS.md)** - N-dimensional modeling patterns
-- **[Variadic Operations](docs/VARIADIC_OPERATIONS.md)** - Advanced pattern matching
-- **[Macros Guide](docs/README_MACROS.md)** - Macro-based modeling techniques
-- **[Advanced AST](docs/ADVANCED_AST.md)** - Automatic linearization and AST transformations
-- **[Architecture](docs/ARCHITECTURE.md)** - System design and implementation details
-- **[Project Planning](docs/planning/)** - Development plans and completion reports
-
-Generate full documentation:
+**Generate full docs locally:**
 
 ```bash
 mix docs
 ```
 
-## 🔧 Configuration
+## 🎯 Core Features
 
-Dantzig automatically downloads the HiGHS binary for your platform. Customize:
+### Pattern-Based Variables
+
+Create complex variable structures with simple generators:
 
 ```elixir
-# Custom HiGHS binary path
+# 2D transportation problem: supply[i] to demand[j]
+variables("transport", [i <- 1..3, j <- 1..4], :continuous, min: 0)
+
+# 3D production planning: product[p] in period[t] at plant[f]
+variables("produce", [p <- products, t <- 1..12, f <- facilities], :integer, min: 0)
+
+# 4D chess tournament: player[a] vs player[b] in round[r] at table[t]
+variables("game", [a <- 1..8, b <- 1..8, r <- 1..7, t <- 1..4], :binary)
+```
+
+### Automatic Linearization
+
+Non-linear expressions become linear constraints behind the scenes:
+
+```elixir
+# Absolute values
+constraints(abs(inventory) <= max_inventory, "Absolute inventory")
+
+# Maximum functions
+constraints(max(profit1, profit2, profit3) >= target, "Max profit")
+
+# Minimum functions
+constraints(min(cost1, cost2) <= budget, "Min cost")
+
+# Logical operations (binary variables)
+constraints(decision1 AND decision2 AND decision3, "All decisions required")
+constraints(decision1 OR decision2 OR decision3, "At least one decision")
+```
+
+### Flexible Constraint Patterns
+
+Express complex constraints naturally:
+
+```elixir
+# Sum over specific dimensions
+constraints([i <- 1..5], sum(x(i, :_)) == 1, "One per row")
+constraints([j <- 1..5], sum(x(:_, j)) == 1, "One per column")
+
+# Complex aggregations
+constraints([i <- 1..3], sum(x(i, :_)) >= demand[i], "Demand satisfaction")
+
+# Multi-dimensional constraints
+constraints([i <- 1..3, j <- 1..3], x(i, j) <= capacity[i][j], "Capacity limits")
+```
+
+## 💡 Examples by Complexity
+
+### **Simple Problems**
+
+- **Resource Allocation**: `mix run examples/simple_working_example.exs`
+- **Knapsack**: `mix run examples/knapsack_problem.exs`
+- **Assignment**: `mix run examples/assignment_problem.exs`
+
+### **Medium Problems**
+
+- **Transportation**: `mix run examples/transportation_problem.exs`
+- **Production Planning**: `mix run examples/production_planning.exs`
+- **Blending**: `mix run examples/blending_problem.exs`
+
+### **Complex Problems**
+
+- **School Timetabling**: `mix run examples/school_timetabling.exs` (60 variables!)
+- **N-Queens**: `mix run examples/nqueens_dsl.exs`
+- **Pattern Operations**: `mix run examples/pattern_based_operations_example.exs`
+
+## 🏫 School Timetabling Showcase
+
+**Problem**: Schedule 5 teachers across 3 subjects, 4 time slots, and 3 rooms with complex constraints.
+
+**Generated Timetable**:
+
+| Time Slot  | Room 1                  | Room 2                  | Room 3                  |
+| ---------- | ----------------------- | ----------------------- | ----------------------- |
+| **Slot 1** | Teacher4<br/>📐 Math    | Teacher2<br/>📚 English | Teacher1<br/>🔬 Science |
+| **Slot 2** | Teacher3<br/>📚 English | Teacher5<br/>🔬 Science | Available               |
+| **Slot 3** | Teacher4<br/>🔬 Science | Teacher1<br/>📐 Math    | Teacher2<br/>📐 Math    |
+| **Slot 4** | Teacher3<br/>🔬 Science | Teacher5<br/>🔬 Science | Teacher4<br/>📚 English |
+
+**Legend:** 📐 Math, 🔬 Science, 📚 English
+
+**Key Results**:
+
+- ✅ **60 decision variables** automatically created
+- ✅ **Complex multi-dimensional constraints** handled elegantly
+- ✅ **Real-world scheduling scenario** successfully optimized
+- ✅ **Teacher qualifications** properly enforced
+- ✅ **No room conflicts** or double-booking
+
+This demonstrates Dantzig's power for complex, real-world optimization problems.
+
+## 🔧 Configuration
+
+Dantzig automatically downloads the HiGHS solver binary for your platform:
+
+```elixir
+# Custom binary path (optional)
 config :dantzig, :highs_binary_path, "/usr/local/bin/highs"
 
 # HiGHS version (default: "1.9.0")
 config :dantzig, :highs_version, "1.9.0"
 ```
 
-## 🎨 Examples
+## 📊 Current Capabilities
 
-Check out the `examples/` directory for comprehensive runnable examples:
+| Feature                     | Status      | Notes                                   |
+| --------------------------- | ----------- | --------------------------------------- |
+| **Linear Programming**      | ✅ Complete | Full support                            |
+| **Quadratic Programming**   | ✅ Complete | Degree ≤ 2 expressions                  |
+| **Pattern-based Modeling**  | ✅ Complete | N-dimensional variables                 |
+| **Automatic Linearization** | ✅ Complete | abs, max/min, logical ops               |
+| **Mixed-Integer Variables** | ⚠️ Tracked  | Types defined, LP serialization pending |
+| **Custom Operators**        | 🚧 Reserved | `:in` operator for future use           |
 
-### **Core Examples**
+## 🤝 Contributing
 
-- `simple_working_example.exs` - Basic pattern-based modeling
-- `pattern_based_operations_example.exs` - N-dimensional modeling
-- `variadic_operations_example.exs` - Advanced pattern matching
+We welcome contributions! Explore the [architecture docs](docs/ARCHITECTURE.md) to understand the system design, and feel free to submit issues and pull requests on GitHub.
 
-### Classical Optimization Problems
+**Key Areas for Contribution**:
 
-- `knapsack_problem.exs` - 0-1 Knapsack with 5 items and capacity constraint
-- `assignment_problem.exs` - Worker-task assignment optimization (3×3 matrix)
-- `transportation_problem.exs` - Supply chain optimization (3 suppliers, 4 customers)
-- `production_planning.exs` - Multi-period production with inventory management
-- `blending_problem.exs` - Material blending with quality constraints
-- `school_timetabling.exs` - Complex school scheduling (demonstration example)
+- Mixed-integer LP serialization
+- Additional non-linear function support
+- Performance optimizations
+- Documentation and examples
 
-### **Advanced Examples**
+## 📜 License
 
-- `nqueens_dsl.exs` - N-Queens problem with multiple solution approaches
-- `tutorial_examples.exs` - Step-by-step learning examples
+MIT License - see [LICENSE.TXT](LICENSE.TXT) for details.
 
-Run any example with: `mix run examples/filename.exs`
+## 🙏 Acknowledgments
 
-**Note**: Examples must be run with `mix run` (not `elixir`) to access the Dantzig modules.
-
-## School Timetabling Example
-
-The School Timetabling Problem demonstrates the DSL's capability for solving complex scheduling problems:
-
-### Problem Complexity
-
-- **5 teachers** with different subject qualifications
-- **3 subjects** (Math, Science, English)
-- **4 time slots** per day
-- **3 rooms** with different capacities
-- **Complex constraints**: Teacher availability, room conflicts, subject requirements
-
-### Example Solution
-
-![School Timetabling Solution](examples/school_timetable.svg)
-
-**Tabular View:**
-
-```
-Slot1:
-  Room1: Teacher4 teaching Math
-  Room2: Teacher2 teaching English
-  Room3: Teacher1 teaching Science
-
-Slot2:
-  Room1: Teacher3 teaching English
-  Room2: Teacher5 teaching Science
-  Room3: Available
-
-Slot3:
-  Room1: Teacher4 teaching Science
-  Room2: Teacher1 teaching Math
-  Room3: Teacher2 teaching Math
-
-Slot4:
-  Room1: Teacher3 teaching Science
-  Room2: Teacher5 teaching Science
-  Room3: Teacher4 teaching English
-```
-
-### Implementation Details
-
-- **60 decision variables** (5×3×3×4 = 180 possible combinations)
-- **Multi-dimensional constraints** handled efficiently
-- **Real-world scheduling scenario** successfully optimized
-- **Teacher qualification constraints** properly enforced
-- **Resource conflict prevention** working correctly
-
-This example demonstrates the DSL's capability for complex, multi-dimensional optimization problems.
-
-## Current Limitations
-
-- **Mixed-integer**: Variable types are tracked but not yet serialized to LP format
-- **Degree limits**: Only linear and quadratic expressions (degree ≤ 2)
-- **Operators**: Supports `:==`, `:<=`, `:>=` (reserved `:in` for future)
-
-## Contributing
-
-Contributions are welcome! Please see our [contributing guidelines](CONTRIBUTING.md) and check out the [architecture documentation](docs/ARCHITECTURE.md) to understand the system design.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.TXT](LICENSE.TXT) file for details.
-
-## Acknowledgments
-
-- [HiGHS](https://github.com/ERGO-Code/HiGHS) - High-performance optimization solver
-- [JuliaBinaryWrappers](https://github.com/JuliaBinaryWrappers) - Pre-compiled HiGHS binaries
-- The Elixir community for inspiration and feedback
+- **[HiGHS](https://github.com/ERGO-Code/HiGHS)** - World-class optimization solver
+- **[JuliaBinaryWrappers](https://github.com/JuliaBinaryWrappers)** - Pre-compiled binaries
+- **Elixir Community** - Inspiration and valuable feedback
 
 ---
 
-## Getting Started
-
-Begin with the [Getting Started Guide](docs/GETTING_STARTED.md) or explore the [Tutorial](docs/TUTORIAL.md) for detailed examples.
+**Ready to optimize?** Start with the [Getting Started Guide](docs/GETTING_STARTED.md) or dive into the [DSL Tutorial](docs/COMPREHENSIVE_TUTORIAL.md) for comprehensive examples!
