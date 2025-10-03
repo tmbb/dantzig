@@ -36,3 +36,4 @@ defmodule Dantzig.DSL.Arithmetic.ASTDebugTest do
     assert true
   end
 end
+

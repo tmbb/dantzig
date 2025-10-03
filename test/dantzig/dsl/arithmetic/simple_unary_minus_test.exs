@@ -21,3 +21,4 @@ defmodule Dantzig.DSL.Arithmetic.SimpleUnaryMinusTest do
     assert true
   end
 end
+
