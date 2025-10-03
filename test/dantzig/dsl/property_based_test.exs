@@ -6,6 +6,9 @@ defmodule Dantzig.DSL.PropertyBasedTest do
   alias Dantzig.Problem.DSL.ConstraintManager
   alias Dantzig.Problem.DSL.ExpressionParser
 
+  # Import Problem module for DSL functions
+  require Dantzig.Problem, as: Problem
+
   describe "VariableManager" do
     test "parse_generators handles various generator patterns" do
       check all(
@@ -66,40 +69,25 @@ defmodule Dantzig.DSL.PropertyBasedTest do
   end
 
   describe "DSL Integration" do
-    test "problem creation with various configurations" do
+    test "modular DSL components work together" do
       check all(
-              num_vars <- StreamData.integer(1..5),
-              var_type <- StreamData.one_of([:continuous, :binary, :integer])
+              var_name <- StreamData.atom(:alphanumeric),
+              range_start <- StreamData.integer(1..3),
+              range_end <- StreamData.integer(4..6)
             ) do
-        # Test that we can create problems with different numbers of variables
-        try do
-          problem =
-            Dantzig.Problem.define do
-              new(direction: :maximize)
+        # Test that the modular DSL components work together
+        generators = [{:<-, [], [{var_name, [], nil}, range_start..range_end]}]
 
-              # Create variables dynamically
-              variables = for i <- 1..num_vars, do: "x#{i}"
+        # Test VariableManager functionality
+        parsed = VariableManager.parse_generators(generators)
+        assert is_list(parsed)
 
-              for var <- variables do
-                variables(var, var_type, min: 0)
-              end
+        combinations = VariableManager.generate_combinations_from_parsed_generators(parsed)
+        assert is_list(combinations)
 
-              # Add simple constraints
-              for var <- variables do
-                # Simple constraint
-                constraints(0 <= 10)
-              end
-
-              # Dummy objective
-              objective(0)
-            end
-
-          assert problem != nil
-          assert problem.direction == :maximize
-        rescue
-          # Some configurations may not be valid
-          _ -> assert true
-        end
+        # Test that components integrate properly
+        assert length(parsed) == 1
+        assert length(combinations) == (range_end - range_start + 1)
       end
     end
   end

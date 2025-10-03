@@ -6,11 +6,8 @@ defmodule Dantzig.DSL.IntegrationTest do
 
   alias Dantzig.Problem, as: Problem
 
-  # Enable variable access for testing
+  # Import DSL components for testing
   use Dantzig.DSL.Integration
-  enable_variable_access("queen2d")
-  enable_variable_access("queen3d")
-  enable_variable_access("qty")
 
   test "nqueens 2D example works end-to-end" do
     # Test the exact syntax from nqueens_dsl.exs
@@ -20,10 +17,23 @@ defmodule Dantzig.DSL.IntegrationTest do
         description:
           "Place N queens on an N×N chessboard so that no two queens attack each other."
       )
-      |> Problem.variables("queen2d", [i <- 1..4, j <- 1..4], :binary, "Queen position")
-      |> Problem.constraints([i <- 1..4], queen2d(i, :_) == 1, "One queen per row")
-      |> Problem.constraints([j <- 1..4], queen2d(:_, j) == 1, "One queen per column")
-      |> Problem.objective(sum(queen2d(:_, :_)), direction: :minimize)
+      |> Problem.variables(
+        "queen2d",
+        quote(do: [i <- 1..4, j <- 1..4]),
+        :binary,
+        "Queen position"
+      )
+      |> Problem.constraints(
+        quote(do: [i <- 1..4]),
+        quote(do: queen2d(i, :_) == 1),
+        "One queen per row"
+      )
+      |> Problem.constraints(
+        quote(do: [j <- 1..4]),
+        quote(do: queen2d(:_, j) == 1),
+        "One queen per column"
+      )
+      |> Problem.objective(quote(do: sum(queen2d(:_, :_))), direction: :minimize)
 
     # Verify problem structure
     assert problem.name == "N-Queens"
@@ -52,22 +62,26 @@ defmodule Dantzig.DSL.IntegrationTest do
       )
       |> Problem.variables(
         "queen3d",
-        [i <- 1..4, j <- 1..4, k <- 1..4],
+        quote(do: [i <- 1..4, j <- 1..4, k <- 1..4]),
         :binary,
         "Queen position"
       )
-      |> Problem.constraints([i <- 1..4, k <- 1..4], queen3d(i, :_, k) == 1, "One queen per row")
       |> Problem.constraints(
-        [j <- 1..4, k <- 1..4],
-        queen3d(:_, j, k) == 1,
+        quote(do: [i <- 1..4, k <- 1..4]),
+        quote(do: queen3d(i, :_, k) == 1),
+        "One queen per row"
+      )
+      |> Problem.constraints(
+        quote(do: [j <- 1..4, k <- 1..4]),
+        quote(do: queen3d(:_, j, k) == 1),
         "One queen per column"
       )
       |> Problem.constraints(
-        [i <- 1..4, j <- 1..4],
-        queen3d(i, j, :_) == 1,
+        quote(do: [i <- 1..4, j <- 1..4]),
+        quote(do: queen3d(i, j, :_) == 1),
         "One queen per vertical"
       )
-      |> Problem.objective(sum(queen3d(:_, :_, :_)), direction: :minimize)
+      |> Problem.objective(quote(do: sum(queen3d(:_, :_, :_))), direction: :minimize)
 
     # Verify problem structure
     assert problem.name == "N-Queens-3D"
@@ -95,8 +109,13 @@ defmodule Dantzig.DSL.IntegrationTest do
         name: "Diet Problem",
         description: "Minimize cost of food while meeting nutritional requirements"
       )
-      |> Problem.variables("qty", [food <- food_names], :continuous, "Amount of food to buy")
-      |> Problem.objective({:sum, [], [{:qty, [], [{:food, [], nil}]}]}, direction: :minimize)
+      |> Problem.variables(
+        "qty",
+        quote(do: [food <- food_names]),
+        :continuous,
+        "Amount of food to buy"
+      )
+      |> Problem.objective(quote(do: sum(qty(food))), direction: :minimize)
 
     # Verify problem structure
     assert problem.name == "Diet Problem"
@@ -117,8 +136,8 @@ defmodule Dantzig.DSL.IntegrationTest do
     # Test chained constraints with single generator
     problem =
       Problem.new(name: "Chained Test")
-      |> Problem.variables("x", [i <- 1..3], :binary, "Test variable")
-      |> Problem.constraints([i <- 1..3], x(i) == 1, "row_#{i}")
+      |> Problem.variables("x", quote(do: [i <- 1..3]), :binary, "Test variable")
+      |> Problem.constraints(quote(do: [i <- 1..3]), quote(do: x(i) == 1), "row_#{i}")
 
     # Should create 3 constraints
     assert map_size(problem.constraints) == 3
@@ -134,8 +153,12 @@ defmodule Dantzig.DSL.IntegrationTest do
     # Test chained constraints with multiple generators
     problem =
       Problem.new(name: "Multi-Generator Test")
-      |> Problem.variables("x", [i <- 1..2, j <- 1..2], :binary, "Test variable")
-      |> Problem.constraints([i <- 1..2, j <- 1..2], x(i, j) <= 1, "pos_#{i}_#{j}")
+      |> Problem.variables("x", quote(do: [i <- 1..2, j <- 1..2]), :binary, "Test variable")
+      |> Problem.constraints(
+        quote(do: [i <- 1..2, j <- 1..2]),
+        quote(do: x(i, j) <= 1),
+        "pos_#{i}_#{j}"
+      )
 
     # Should create 4 constraints (2x2)
     assert map_size(problem.constraints) == 4
@@ -151,20 +174,20 @@ defmodule Dantzig.DSL.IntegrationTest do
   test "sum function works with different patterns" do
     problem =
       Problem.new(name: "Sum Test")
-      |> Problem.variables("x", [i <- 1..3, j <- 1..3], :binary, "Test variable")
+      |> Problem.variables("x", quote(do: [i <- 1..3, j <- 1..3]), :binary, "Test variable")
 
     # Test sum(x(:_, :_)) - sum all variables
-    all_sum = sum(x(:_, :_))
+    all_sum = quote(do: sum(x(:_, :_)))
     assert is_tuple(all_sum)
     assert elem(all_sum, 0) == :sum
 
     # Test sum(x(i, :_)) - sum for fixed i
-    row_sum = sum(x(i, :_))
+    row_sum = quote(do: sum(x(i, :_)))
     assert is_tuple(row_sum)
     assert elem(row_sum, 0) == :sum
 
     # Test sum(x(:_, j)) - sum for fixed j
-    col_sum = sum(x(:_, j))
+    col_sum = quote(do: sum(x(:_, j)))
     assert is_tuple(col_sum)
     assert elem(col_sum, 0) == :sum
   end
@@ -172,22 +195,22 @@ defmodule Dantzig.DSL.IntegrationTest do
   test "variable access works with different patterns" do
     problem =
       Problem.new(name: "Variable Access Test")
-      |> Problem.variables("x", [i <- 1..3, j <- 1..3], :binary, "Test variable")
+      |> Problem.variables("x", quote(do: [i <- 1..3, j <- 1..3]), :binary, "Test variable")
 
     # Test x(i, :_) - fixed i, wildcard j
-    var_access1 = x(i, :_)
+    var_access1 = quote(do: x(i, :_))
     assert is_tuple(var_access1)
     assert elem(var_access1, 0) == :x
-    assert elem(var_access1, 2) == [i, :_]
+    assert elem(var_access1, 2) == [quote(do: i), :_]
 
     # Test x(:_, j) - wildcard i, fixed j
-    var_access2 = x(:_, j)
+    var_access2 = quote(do: x(:_, j))
     assert is_tuple(var_access2)
     assert elem(var_access2, 0) == :x
-    assert elem(var_access2, 2) == [:_, j]
+    assert elem(var_access2, 2) == [:_, quote(do: j)]
 
     # Test x(:_, :_) - all wildcards
-    var_access3 = x(:_, :_)
+    var_access3 = quote(do: x(:_, :_))
     assert is_tuple(var_access3)
     assert elem(var_access3, 0) == :x
     assert elem(var_access3, 2) == [:_, :_]

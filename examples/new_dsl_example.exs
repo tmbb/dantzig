@@ -6,16 +6,20 @@ require Dantzig.Problem, as: Problem
 IO.puts("=== Modern DSL Example ===")
 
 # Create a problem with metadata
-problem = Problem.new(
-  name: "Simple Test",
-  description: "Testing the modern DSL syntax"
-)
+problem =
+  Problem.new(
+    name: "Simple Test",
+    description: "Testing the modern DSL syntax"
+  )
 
 IO.puts("Created problem: #{problem.name}")
 IO.puts("Description: #{problem.description}")
 
 # Add variables using the modern DSL syntax
-problem = Problem.variables(problem, "x", [i <- 1..2, j <- 1..2], :binary, description: "Test variables")
+problem =
+  Problem.variables(problem, "x", quote(do: [i <- 1..2, j <- 1..2]), :binary,
+    description: "Test variables"
+  )
 
 IO.puts("Added variables:")
 var_map = Problem.get_variables_nd(problem, "x")

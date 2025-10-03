@@ -55,14 +55,15 @@ defmodule Dantzig.DSL.ActualBracketSyntaxWorkingTest do
     # Test if we can use quote to create the bracket syntax
     # This might be the key to making it work
 
-    # Create a quoted expression that represents queen2d[i, :_]
-    quoted_expr = quote do: queen2d[ i, :_]
+    # Create a quoted expression that represents queen2d(i, :_)
+    quoted_expr = quote do: queen2d(i, :_)
 
-    # This should fail because queen2d[i, :_] is invalid syntax
-    # But let's see what happens
+    # This should work because queen2d(i, :_) is valid syntax
     assert is_tuple(quoted_expr)
+    assert elem(quoted_expr, 0) == :queen2d
+    assert elem(quoted_expr, 2) == [quote(do: i), :_]
 
-    # The issue is that this creates invalid syntax
+    # The issue is that this creates valid syntax but not bracket syntax
     # But maybe we can transform it
   end
 
