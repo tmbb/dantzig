@@ -111,6 +111,8 @@ defmodule Dantzig.HiGHS do
       end)
 
     bounds = all_variable_bounds(Map.values(problem.variables))
+    integers = variables_by_type(problem.variables, :integer)
+    binaries = variables_by_type(problem.variables, :binary)
 
     [
       direction_to_iodata(problem.direction),
@@ -122,9 +124,15 @@ defmodule Dantzig.HiGHS do
       "Bounds\n",
       bounds,
       "General\n",
+      list_variables(integers),
+      "Binary\n",
+      list_variables(binaries),
       "End\n"
     ]
   end
+
+  # Bounds have higher priority than variable type. So we need to exclude the :binary type here.
+  defp variable_bounds(%ProblemVariable{type: :binary}), do: ""
 
   defp variable_bounds(%ProblemVariable{} = v) do
     case {v.min, v.max} do
@@ -144,5 +152,15 @@ defmodule Dantzig.HiGHS do
 
   defp all_variable_bounds(variables) do
     Enum.map(variables, &variable_bounds/1)
+  end
+
+  defp variables_by_type(variables, type) do
+    for {name, %{type: ^type}} <- variables, do: name
+  end
+
+  defp list_variables([]), do: []
+
+  defp list_variables(variables) do
+    for name <- variables, do: "  #{name}\n"
   end
 end
