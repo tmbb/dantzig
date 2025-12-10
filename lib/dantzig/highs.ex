@@ -13,7 +13,7 @@ defmodule Dantzig.HiGHS do
   def solve(%Problem{} = problem) do
     iodata = to_lp_iodata(problem)
 
-    command = Config.default_highs_binary_path()
+    command = Config.get_highs_binary_path()
 
     with_temporary_files(["model.lp", "solution.lp"], fn [model_path, solution_path] ->
       File.write!(model_path, iodata)
