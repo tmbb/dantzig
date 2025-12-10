@@ -13,7 +13,7 @@ defmodule Dantzig.Instances.ClosedFormQuadraticTest do
       problem = Problem.increment_objective(problem, x - x * x)
     end
 
-    solution = Dantzig.solve!(problem)
+    {:ok, solution} = Dantzig.HiGHS.solve(problem)
 
     assert solution.model_status == "Optimal"
     assert solution.feasibility == "Feasible"

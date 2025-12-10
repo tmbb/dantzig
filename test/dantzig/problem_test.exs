@@ -109,7 +109,7 @@ defmodule Dantzig.ProblemTest do
     problem = Problem.add_constraint(problem, Constraint.new(x + y, :==, 20))
     problem = Problem.increment_objective(problem, x + y + z)
 
-    assert {:ok, solution} = Dantzig.solve(problem)
+    assert {:ok, solution} = Dantzig.HiGHS.solve(problem)
     assert solution.feasibility == "Feasible"
   end
 end

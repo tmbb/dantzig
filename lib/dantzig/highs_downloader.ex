@@ -2,8 +2,6 @@ defmodule Dantzig.HiGHSDownloader do
   alias Dantzig.Config
   require Logger
 
-  @external_resource Dantzig.Config.get_highs_binary_path()
-
   def maybe_download_for_target() do
     downloaded_version = Config.read_downloaded_version()
     highs_version = Config.get_highs_version()
@@ -52,7 +50,7 @@ defmodule Dantzig.HiGHSDownloader do
     unpacked =
       :erl_tar.extract({:binary, tar_archive}, [
         :compressed,
-        files: [~c'bin/highs'],
+        files: [~c"bin/highs"],
         cwd: to_charlist(tmp_dir)
       ])
 

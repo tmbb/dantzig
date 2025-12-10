@@ -17,7 +17,7 @@ defmodule Dantzig.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
       name: "Danztig",
-      description: "Linear progamming solver for elixir",
+      description: "Linear programming solver for elixir",
       source_url: "https://github.com/tmbb/dantzig"
     ]
   end
@@ -45,9 +45,10 @@ defmodule Dantzig.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nimble_parsec, "~> 1.4"},
+      {:nimble_parsec, "~> 1.4", runtime: false},
       {:ex_doc, "~> 0.36", only: :dev, runtime: false},
-      {:stream_data, "~> 1.1", only: [:test, :dev]}
+      {:stream_data, "~> 1.1", only: [:test, :dev]},
+      {:mneme, "~> 0.10.2", only: :test}
     ]
   end
 
