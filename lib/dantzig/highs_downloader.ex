@@ -92,7 +92,7 @@ defmodule Dantzig.HiGHSDownloader do
     [os, suffix] = Enum.take(rest, -2)
 
     case {arch, os, suffix} do
-      {"aarch64", "apple", "darwin"} -> "aarch64-apple-darwin"
+      {"aarch64", "apple", "darwin" <> _} -> "aarch64-apple-darwin"
       {"aarch64", "linux", "gnu"} -> "aarch64-linux-gnu-cxx11"
       {"aarch64", "linux", "musl"} -> "aarch64-linux-musl-cxx11"
       {"aarch64", "unknown", "freebsd"} -> "aarch64-unknown-freebsd"
