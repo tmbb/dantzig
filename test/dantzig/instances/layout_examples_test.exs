@@ -23,7 +23,7 @@ defmodule Danztig.Instances.LayoutExampleTest do
         |> Problem.increment_objective(center - left_margin - right_margin)
     end
 
-    solution = Dantzig.solve!(problem)
+    {:ok, solution} = Dantzig.HiGHS.solve(problem)
 
     # Test properties of the solution
     assert solution.model_status == "Optimal"

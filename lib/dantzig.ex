@@ -3,6 +3,7 @@ defmodule Dantzig do
   Documentation for `Dantzig`.
   """
 
+  alias Dantzig.Format.CPLEX
   alias Dantzig.HiGHS
   alias Dantzig.Problem
 
@@ -16,7 +17,7 @@ defmodule Dantzig do
   end
 
   def dump_problem_to_file(%Problem{} = problem, path) do
-    iodata = HiGHS.to_lp_iodata(problem)
+    iodata = CPLEX.to_iodata(problem)
     File.write!(path, iodata)
   end
 end

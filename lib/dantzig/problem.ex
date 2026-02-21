@@ -21,10 +21,10 @@ defmodule Dantzig.Problem do
             direction: nil,
             variables: %{},
             constraints: %{},
-            contraints_metadata: %{}
+            constraints_metadata: %{}
 
   @spec solve_for_all_variables(t()) :: %{
-          ProblemVariable.variable_namme() => SolvedConstraint.t()
+          ProblemVariable.variable_name() => SolvedConstraint.t()
         }
   def solve_for_all_variables(%__MODULE__{} = problem) do
     # There are two ways of solving for all variables:
