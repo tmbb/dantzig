@@ -97,4 +97,19 @@ defmodule Dantzig.ProblemTest do
       assert constraint.right_hand_side == const2 - const1
     end
   end
+
+  test "can solve problem with different variable types" do
+    use Dantzig.Polynomial.Operators
+
+    problem = Problem.new(direction: :maximize)
+    {problem, x} = Problem.new_variable(problem, "x", type: :binary)
+    {problem, y} = Problem.new_variable(problem, "y", type: :real, min: 1)
+    {problem, z} = Problem.new_variable(problem, "z", type: :integer, min: 5, max: 20)
+
+    problem = Problem.add_constraint(problem, Constraint.new(x + y, :==, 20))
+    problem = Problem.increment_objective(problem, x + y + z)
+
+    assert {:ok, solution} = Dantzig.solve(problem)
+    assert solution.feasibility == "Feasible"
+  end
 end

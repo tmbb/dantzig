@@ -8,6 +8,13 @@ defmodule Dantzig.Problem do
 
   @type t :: %__MODULE__{}
 
+  @type new_variable_opts :: [
+          prefix: String.t() | nil,
+          min: number() | nil,
+          max: number() | nil,
+          type: :real | :integer | :binary | nil
+        ]
+
   defstruct variable_counter: 0,
             constraint_counter: 0,
             objective: Polynomial.const(0.0),
@@ -16,7 +23,9 @@ defmodule Dantzig.Problem do
             constraints: %{},
             contraints_metadata: %{}
 
-  @spec solve_for_all_variables(t()) :: %{ProblemVariable.variable_namme() => SolvedConstraint.t()}
+  @spec solve_for_all_variables(t()) :: %{
+          ProblemVariable.variable_namme() => SolvedConstraint.t()
+        }
   def solve_for_all_variables(%__MODULE__{} = problem) do
     # There are two ways of solving for all variables:
     #
@@ -124,6 +133,7 @@ defmodule Dantzig.Problem do
     {new_problem, monomial}
   end
 
+  @spec new_variable(t(), String.t() | nil, new_variable_opts()) :: {Polynomial.t(), t()}
   def new_variable(%__MODULE__{} = problem, suffix, opts \\ []) do
     prefix = Keyword.get(opts, :prefix, nil)
 
