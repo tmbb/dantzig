@@ -140,3 +140,29 @@ end
 ## Documentation
 
 TODO
+
+### HiGHS executable version
+
+Dantzig uses HiGHS version 1.11, and by default will use
+this version indefinitely.
+
+Why not picking a different version by default?
+From version 1.12 onwards, HiGHS uses an optimized algorithm,
+which requires access to a dynamically linked systems BLAS library
+(e.g. libopenblas.so on linux).
+While Dantzig would certainly like using the latest and most optimized
+version of HiGHS, requiring a BLAS library requires the installation
+of external packages, which goes against the philosophy of just
+adding the package to your mix.exs file and having it run seamlessly.
+
+**For now, if users wants to access HiGHS v1.12 or above,
+they have to manually specify binary version and set up
+their machine correctly.**
+
+Usually, installing an openblas version is as simple as something
+like the following (on Debian-based linux distributions):
+
+```bash
+sudo apt update
+sudo apt install libopenblas-dev
+```

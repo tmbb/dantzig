@@ -52,7 +52,7 @@ defmodule Dantzig.HiGHSDownloader do
     unpacked =
       :erl_tar.extract({:binary, tar_archive}, [
         :compressed,
-        files: ['bin/highs'],
+        files: [~c'bin/highs'],
         cwd: to_charlist(tmp_dir)
       ])
 
