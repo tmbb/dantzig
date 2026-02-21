@@ -30,7 +30,7 @@ defmodule Dantzig.Config do
   end
 
   def get_highs_version() do
-    Application.get_env(:dantzig, :highs_version, "1.9.0")
+    Application.get_env(:dantzig, :highs_version, "1.12.0")
   end
 
   def get_highs_binary_path() do
