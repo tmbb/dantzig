@@ -7,7 +7,7 @@ defmodule Dantzig.MixProject do
     [
       app: :dantzig,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.18.4",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: Mix.compilers() ++ [:download_solver_binary],
@@ -56,7 +56,7 @@ defmodule Dantzig.MixProject do
       # These are the default files included in the package
       files: ~w(lib priv .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/tmbb/dantzig"}
+      links: %{"GitHub" => "https://github.com/tallarium/dantzig"}
     ]
   end
 end
