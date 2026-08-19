@@ -42,7 +42,8 @@ defmodule Dantzig.Config do
   # their machine correctly
 
   def get_highs_version() do
-    Application.get_env(:dantzig, :highs_version, "1.11.0")
+    # TODO: make this the same as what's in `@highs_version_file_basename`
+    Application.get_env(:dantzig, :highs_version, "1.15.1")
   end
 
   def get_highs_binary_path() do

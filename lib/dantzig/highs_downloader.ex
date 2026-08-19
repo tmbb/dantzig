@@ -82,8 +82,11 @@ defmodule Dantzig.HiGHSDownloader do
     :ok
   end
 
-  # Available targets: https://github.com/evanw/esbuild/tree/main/npm/@esbuild
+  # Available targets: https://github.com/ERGO-Code/HiGHS/releases
   def target() do
+
+    # TODO: what is `dantzig/priv/highs-architectures.txt` for?
+
     # Get erlang's interpretation of what the system architecture is
     arch_str = :erlang.system_info(:system_architecture)
     # Split the architecture string into its component parts
@@ -92,25 +95,15 @@ defmodule Dantzig.HiGHSDownloader do
     [os, suffix] = Enum.take(rest, -2)
 
     case {arch, os, suffix} do
-      {"aarch64", "apple", "darwin" <> _} -> "aarch64-apple-darwin"
-      {"aarch64", "linux", "gnu"} -> "aarch64-linux-gnu-cxx11"
-      {"aarch64", "linux", "musl"} -> "aarch64-linux-musl-cxx11"
-      {"aarch64", "unknown", "freebsd"} -> "aarch64-unknown-freebsd"
-      {"i686", "linux", "gnu"} -> "i686-linux-gnu-cxx11"
-      {"i686", "linux", "musl"} -> "i686-linux-gnu-cxx11"
-      {"x86_64", "apple", "darwin"} -> "x86_64-apple-darwin"
-      {"x86_64", "linux", "gnu"} -> "x86_64-linux-gnu-cxx11"
-      {"x86_64", "linux", "musl"} -> "x86_64-linux-musl-cxx11"
-      {"x86_64", "unknown", "freebsd"} -> "x86_64-unknown-freebsd"
-      {"x86_64", "w64", "mingw32"} -> "x86_64-w64-mingw32"
+      {"aarch64", "apple", "darwin" <> _} -> "arm-apple-static-mit"
+      {"aarch64", "linux", "gnu"} -> "aarch64-linux-gnu-static-mit"
+      {"x86_64", "linux", "gnu"} -> " x86_64-linux-gnu-static-mit"
     end
   end
 
   defp tar_gz_url(highs_version, target) do
-    "https://github.com/JuliaBinaryWrappers/" <>
-    "HiGHSstatic_jll.jl/releases/download/" <>
-    "HiGHSstatic-v#{highs_version}%2B0/" <>
-    "HiGHSstatic.v#{highs_version}.#{target}.tar.gz"
+    "https://github.com/ERGO-Code/HiGHS/releases/download/" <>
+    "v#{highs_version}/highs-#{highs_version}-#{target}.tar.gz"
   end
 
   defp fetch_file!(url, retry \\ true) do
